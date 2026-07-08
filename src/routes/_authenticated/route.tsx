@@ -21,7 +21,14 @@ function AuthedLayout() {
   const nav = useNavigate();
   const [checked, setChecked] = useState(false);
   const [platformClass, setPlatformClass] = useState("platform-web");
-  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+  const [showMiniPlayer, setShowMiniPlayer] = useState(() => {
+    // Initialize from localStorage to persist across page reloads
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sonexa.miniPlayer.dismissed");
+      return saved !== "true";
+    }
+    return false;
+  });
   const [miniPlayerExpanded, setMiniPlayerExpanded] = useState(false);
 
   useEffect(() => {

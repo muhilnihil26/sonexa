@@ -1,12 +1,11 @@
 /**
  * MiniPlayer — a compact, always-visible floating player that persists
- * across tab navigation. It appears when the user minimises the main
- * PlayerBar or when the main bar is scrolled off screen on mobile.
- * The component lives outside <main> in the layout so route changes
- * never unmount it.
+ * across tab navigation and browser sessions. It appears when the user 
+ * minimises the main PlayerBar or when the main bar is scrolled off screen.
+ * Uses localStorage to remember visibility state across page exits/returns.
  */
 import { Play, Pause, SkipForward, X, ChevronUp, Heart, Music2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePlayer } from "@/lib/player-store";
 import { useLocalLibrary } from "@/lib/local-library";
 import { toast } from "sonner";
@@ -22,6 +21,22 @@ export function MiniPlayer({ onExpand }: { onExpand: () => void }) {
   const { current, isPlaying, toggle, next, progress, duration } = usePlayer();
   const { isLiked, toggleLike } = useLocalLibrary();
   const [dismissed, setDismissed] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Load visibility state from localStorage on mount
+  useEffect(() => {
+    const savedState = localStorage.getItem("sonexa.miniPlayer.dismissed");
+    if (savedState === "true") {
+      setDismissed(true);
+    }
+    setMounted(true);
+  }, []);
+
+  // Save visibility state to localStorage when it changes
+  useEffect(() => {
+    if (!mounted) return;
+    localStorage.setItem("sonexa.miniPlayer.dismissed", String(dismissed));
+  }, [dismissed, mounted]);
 
   if (!current || dismissed) return null;
 
