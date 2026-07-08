@@ -1,0 +1,13 @@
+{
+  "buildCommand": "npm ci && npm run build",
+  "outputDirectory": ".vercel/output",
+  "devCommand": "npm run dev",
+  "framework": "vite",
+  "nodeVersion": "24.x",
+  "crons": [
+    {
+      "path": "/api/sonexa/daily-sync",
+      "schedule": "0 3 * * *"
+    }
+  ]
+}
