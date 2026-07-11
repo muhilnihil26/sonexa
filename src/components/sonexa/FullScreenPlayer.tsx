@@ -17,6 +17,7 @@ import {
   Send,
   SlidersHorizontal,
   Bluetooth,
+  Minimize2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,6 +45,7 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
   const likeSong = useServerFn(toggleSongLike);
   const addComment = useServerFn(addSongComment);
   const [panel, setPanel] = useState<"none" | "queue" | "lyrics" | "comments" | "sound">("lyrics");
+  const [compactMode, setCompactMode] = useState(false);
   const [lyrics, setLyrics] = useState<LyricsResult | null>(null);
   const [lyricsLoading, setLyricsLoading] = useState(false);
   const [comment, setComment] = useState("");
@@ -197,6 +199,13 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
           </div>
           <div className="flex items-center gap-1">
             <button
+              onClick={() => setCompactMode(!compactMode)}
+              className={`p-2 rounded-full bg-black/20 hover:bg-card/60 transition backdrop-blur ${compactMode ? "text-primary" : ""}`}
+              title="Compact mode"
+            >
+              <Minimize2 className="h-6 w-6" />
+            </button>
+            <button
               onClick={() => setPanel((s) => (s === "lyrics" ? "none" : "lyrics"))}
               className={`p-2 rounded-full bg-black/20 hover:bg-card/60 transition backdrop-blur ${panel === "lyrics" ? "text-primary" : ""}`}
               title="Lyrics"
@@ -236,23 +245,33 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
             className={`flex-1 flex flex-col items-center w-full ${
               isYouTube
                 ? "max-w-3xl justify-end rounded-2xl border border-white/10 bg-black/45 p-4 sm:p-5 shadow-2xl backdrop-blur-xl"
-                : "max-w-md justify-center"
+                : compactMode ? "max-w-lg justify-center" : "max-w-md justify-center"
             }`}
           >
             {isYouTube ? (
               <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
-                Sonexa video mode
+                <span className="flex items-center gap-1.5">
+                  <img src="/logo-icon.png" alt="Sonexa" className="h-4 w-4 rounded" />
+                  Sonexa video mode
+                </span>
               </div>
             ) : (
-              <img
-                src={p.current.cover}
-                alt={p.current.title}
-                className={`aspect-square w-full max-w-sm rounded-2xl object-cover shadow-glow animate-img-in ${p.isPlaying ? "animate-cover-float" : ""}`}
-              />
+              <div className="relative">
+                <img
+                  src={p.current.cover}
+                  alt={p.current.title}
+                  className={`aspect-square w-full rounded-2xl object-cover shadow-glow animate-img-in ${p.isPlaying ? "animate-cover-float" : ""} ${compactMode ? "max-w-[200px]" : "max-w-sm"}`}
+                />
+                {/* Sonexa watermark */}
+                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-md">
+                  <img src="/logo-icon.png" alt="Sonexa" className="h-4 w-4 rounded" />
+                  <span className="text-[10px] font-semibold text-white/90">Sonexa</span>
+                </div>
+              </div>
             )}
-            <div className={`${isYouTube ? "mt-1" : "mt-8"} text-center w-full`}>
+            <div className={`${isYouTube ? "mt-1" : compactMode ? "mt-4" : "mt-8"} text-center w-full`}>
               <div className="mx-auto max-w-full overflow-hidden">
-                <h2 className="text-3xl md:text-4xl font-black tracking-tight">
+                <h2 className={`${compactMode ? "text-xl md:text-2xl" : "text-3xl md:text-4xl"} font-black tracking-tight`}>
                   <span className={p.current.title.length > 22 ? "song-title-marquee" : ""}>
                     <span>{p.current.title}</span>
                     {p.current.title.length > 22 && (
@@ -266,7 +285,7 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
               </p>
             </div>
             <div
-              className={`w-full mt-6 flex items-center gap-3 text-[11px] ${
+              className={`w-full ${compactMode ? "mt-4" : "mt-6"} flex items-center gap-3 text-[11px] ${
                 isYouTube ? "text-white/70" : "text-muted-foreground"
               }`}
             >
@@ -282,93 +301,97 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
               />
               <span>{fmt(p.duration)}</span>
             </div>
-            <div className="mt-6 flex items-center gap-6">
+            <div className={`${compactMode ? "mt-4" : "mt-6"} flex items-center gap-6`}>
               <button
                 onClick={p.toggleShuffle}
                 className={`transition ${p.shuffle ? "text-primary" : "text-white/70 hover:text-white"}`}
               >
-                <Shuffle className="h-5 w-5" />
+                <Shuffle className={`${compactMode ? "h-4 w-4" : "h-5 w-5"}`} />
               </button>
               <button onClick={p.prev} className="text-white/80 hover:text-white">
-                <SkipBack className="h-7 w-7" />
+                <SkipBack className={`${compactMode ? "h-5 w-5" : "h-7 w-7"}`} />
               </button>
               <button
                 onClick={p.toggle}
-                className={`h-16 w-16 rounded-full bg-white shadow-glow flex items-center justify-center hover:scale-105 transition ${p.isPlaying ? "animate-play-pulse" : ""}`}
+                className={`h-12 w-12 rounded-full bg-white shadow-glow flex items-center justify-center hover:scale-105 transition ${p.isPlaying ? "animate-play-pulse" : ""} ${compactMode ? "h-10 w-10" : "h-16 w-16"}`}
               >
                 {p.isPlaying ? (
-                  <Pause className="h-7 w-7 fill-black text-black" />
+                  <Pause className={`${compactMode ? "h-5 w-5" : "h-7 w-7"} fill-black text-black`} />
                 ) : (
-                  <Play className="h-7 w-7 fill-black text-black ml-1" />
+                  <Play className={`${compactMode ? "h-5 w-5" : "h-7 w-7"} fill-black text-black ml-1`} />
                 )}
               </button>
               <button onClick={p.next} className="text-white/80 hover:text-white">
-                <SkipForward className="h-7 w-7" />
+                <SkipForward className={`${compactMode ? "h-5 w-5" : "h-7 w-7"}`} />
               </button>
               <button
                 onClick={p.toggleRepeat}
                 className={`transition ${p.repeat ? "text-primary" : "text-white/70 hover:text-white"}`}
               >
-                <Repeat className="h-5 w-5" />
+                <Repeat className={`${compactMode ? "h-4 w-4" : "h-5 w-5"}`} />
               </button>
             </div>
-            <div className="mt-6 flex items-center gap-3 w-full max-w-xs">
-              <Volume2
-                className={`h-4 w-4 ${isYouTube ? "text-white/70" : "text-muted-foreground"}`}
-              />
-              <input
-                type="range"
-                min={0}
-                max={isYouTube ? 1 : 3}
-                step={0.01}
-                value={isYouTube ? Math.min(1, p.volume) : p.volume}
-                onChange={(e) => p.setVolume(Number(e.target.value))}
-                className="flex-1 accent-[var(--color-primary)] h-1"
-              />
-              <span
-                className={`w-10 text-right text-[11px] ${isYouTube ? "text-white/70" : "text-muted-foreground"}`}
-              >
-                {Math.round((isYouTube ? Math.min(1, p.volume) : p.volume) * 100)}%
-              </span>
-              <Heart
-                className={`h-4 w-4 ${isYouTube ? "text-white/70" : "text-muted-foreground"}`}
-              />
-            </div>
-            {p.pairedTvCode && p.pairedTvCode.length === 6 && (
-              <div className="mt-4 flex items-center justify-between gap-3 w-full max-w-xs rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-xs text-emerald-400 font-semibold shadow-sm backdrop-blur-md animate-fade-up">
-                <div className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
-                  Playing on TV ({p.pairedTvCode})
+            {!compactMode && (
+              <>
+                <div className="mt-6 flex items-center gap-3 w-full max-w-xs">
+                  <Volume2
+                    className={`h-4 w-4 ${isYouTube ? "text-white/70" : "text-muted-foreground"}`}
+                  />
+                  <input
+                    type="range"
+                    min={0}
+                    max={isYouTube ? 1 : 3}
+                    step={0.01}
+                    value={isYouTube ? Math.min(1, p.volume) : p.volume}
+                    onChange={(e) => p.setVolume(Number(e.target.value))}
+                    className="flex-1 accent-[var(--color-primary)] h-1"
+                  />
+                  <span
+                    className={`w-10 text-right text-[11px] ${isYouTube ? "text-white/70" : "text-muted-foreground"}`}
+                  >
+                    {Math.round((isYouTube ? Math.min(1, p.volume) : p.volume) * 100)}%
+                  </span>
+                  <Heart
+                    className={`h-4 w-4 ${isYouTube ? "text-white/70" : "text-muted-foreground"}`}
+                  />
                 </div>
-                <button
-                  onClick={() => p.setPairedTvCode("")}
-                  className="rounded-lg bg-emerald-500 text-background px-2.5 py-1 font-bold text-[10px] uppercase tracking-wider hover:bg-emerald-400 transition"
+                {p.pairedTvCode && p.pairedTvCode.length === 6 && (
+                  <div className="mt-4 flex items-center justify-between gap-3 w-full max-w-xs rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 text-xs text-emerald-400 font-semibold shadow-sm backdrop-blur-md animate-fade-up">
+                    <div className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full bg-emerald-400 animate-ping" />
+                      Playing on TV ({p.pairedTvCode})
+                    </div>
+                    <button
+                      onClick={() => p.setPairedTvCode("")}
+                      className="rounded-lg bg-emerald-500 text-background px-2.5 py-1 font-bold text-[10px] uppercase tracking-wider hover:bg-emerald-400 transition"
+                    >
+                      Disconnect
+                    </button>
+                  </div>
+                )}
+                <div
+                  className={`mt-5 flex flex-wrap items-center justify-center gap-2 text-xs ${
+                    isYouTube ? "text-white/75" : "text-muted-foreground"
+                  }`}
                 >
-                  Disconnect
-                </button>
-              </div>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-card/70 px-3 py-1.5 backdrop-blur">
+                    <Eye className="h-3.5 w-3.5" /> {social?.stats.viewCount ?? 0}
+                  </span>
+                  <button
+                    onClick={likeCurrent}
+                    className="inline-flex items-center gap-1 rounded-full bg-card/70 px-3 py-1.5 hover:text-foreground backdrop-blur"
+                  >
+                    <Heart className="h-3.5 w-3.5" /> {social?.stats.likeCount ?? 0}
+                  </button>
+                  <button
+                    onClick={shareCurrent}
+                    className="inline-flex items-center gap-1 rounded-full bg-card/70 px-3 py-1.5 hover:text-foreground backdrop-blur"
+                  >
+                    <Share2 className="h-3.5 w-3.5" /> Share
+                  </button>
+                </div>
+              </>
             )}
-            <div
-              className={`mt-5 flex flex-wrap items-center justify-center gap-2 text-xs ${
-                isYouTube ? "text-white/75" : "text-muted-foreground"
-              }`}
-            >
-              <span className="inline-flex items-center gap-1 rounded-full bg-card/70 px-3 py-1.5 backdrop-blur">
-                <Eye className="h-3.5 w-3.5" /> {social?.stats.viewCount ?? 0}
-              </span>
-              <button
-                onClick={likeCurrent}
-                className="inline-flex items-center gap-1 rounded-full bg-card/70 px-3 py-1.5 hover:text-foreground backdrop-blur"
-              >
-                <Heart className="h-3.5 w-3.5" /> {social?.stats.likeCount ?? 0}
-              </button>
-              <button
-                onClick={shareCurrent}
-                className="inline-flex items-center gap-1 rounded-full bg-card/70 px-3 py-1.5 hover:text-foreground backdrop-blur"
-              >
-                <Share2 className="h-3.5 w-3.5" /> Share
-              </button>
-            </div>
           </div>
 
           {panel === "queue" && (

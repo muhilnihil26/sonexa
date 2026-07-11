@@ -1,4 +1,4 @@
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Volume2, Maximize2, ListMusic, Plus, Heart, Minimize2 } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Volume2, Maximize2, ListMusic, Plus, Heart, Minimize2, Wifi } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -10,6 +10,8 @@ import { MusicClock } from "./MusicClock";
 import { useSession } from "@/lib/auth";
 import { recordListeningTaste } from "@/lib/listening-taste";
 import { useLocalLibrary } from "@/lib/local-library";
+import { MiniPlayer } from "./MiniPlayer";
+import { notifyDataSavingMode, requestNotificationPermission } from "@/lib/notifications";
 import { toast } from "sonner";
 
 function fmt(s: number) {
@@ -45,8 +47,43 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
   const recordView = useServerFn(recordSongView);
   const [full, setFull] = useState(false);
   const [mini, setMini] = useState(false);
+  const [showMiniPlayer, setShowMiniPlayer] = useState(false);
+  const [dataSavingMode, setDataSavingMode] = useState(false);
   const [lastCounted, setLastCounted] = useState("");
   const [lastTasteCounted, setLastTasteCounted] = useState("");
+
+  // Load data saving mode from localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem("sonexa.dataSavingMode");
+    if (saved === "true") {
+      setDataSavingMode(true);
+    }
+    // Request notification permission on mount
+    requestNotificationPermission();
+  }, []);
+
+  // Save data saving mode to localStorage
+  useEffect(() => {
+    localStorage.setItem("sonexa.dataSavingMode", String(dataSavingMode));
+  }, [dataSavingMode]);
+
+  // Notify when data saving mode changes
+  useEffect(() => {
+    // Only notify on user interaction, not on initial load
+    const hasInteracted = localStorage.getItem("sonexa.hasInteracted");
+    if (hasInteracted === "true") {
+      notifyDataSavingMode(dataSavingMode);
+    }
+  }, [dataSavingMode]);
+
+  // Mark user interaction
+  useEffect(() => {
+    const handleInteraction = () => {
+      localStorage.setItem("sonexa.hasInteracted", "true");
+    };
+    document.addEventListener("click", handleInteraction, { once: true });
+    return () => document.removeEventListener("click", handleInteraction);
+  }, []);
 
   const isTvPlatform = typeof window !== "undefined" && 
     (document.querySelector(".platform-tv") !== null || 
@@ -322,6 +359,7 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
             <button
               onClick={() => {
                 setMini(true);
+                setShowMiniPlayer(true);
                 onMiniPlayer?.();
               }}
               className="text-muted-foreground hover:text-foreground transition"
@@ -329,6 +367,16 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
             >
               <Minimize2 className="h-4 w-4" />
             </button>
+            <button
+              onClick={() => setDataSavingMode(!dataSavingMode)}
+              className={`transition ${dataSavingMode ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+              title="Data saving mode"
+            >
+              <Wifi className="h-4 w-4" />
+            </button>
+            {dataSavingMode && (
+              <span className="text-[9px] text-primary font-semibold uppercase tracking-wider">Data Saver</span>
+            )}
             <button
               onClick={() => setFull(true)}
               className="text-muted-foreground hover:text-foreground transition"
@@ -352,12 +400,20 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
             <button
               onClick={() => {
                 setMini(true);
+                setShowMiniPlayer(true);
                 onMiniPlayer?.();
               }}
               className="p-2 text-muted-foreground hover:text-foreground"
               title="Mini player"
             >
               <Minimize2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setDataSavingMode(!dataSavingMode)}
+              className={`p-2 ${dataSavingMode ? "text-primary" : "text-muted-foreground"}`}
+              title="Data saving mode"
+            >
+              <Wifi className="h-4 w-4" />
             </button>
             <button
               onClick={() => setFull(true)}
@@ -370,6 +426,10 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
         </div>
       </div>
       <FullScreenPlayer open={full} onClose={() => setFull(false)} />
+      <MiniPlayer 
+        onExpand={() => setFull(true)} 
+        onMinimize={() => setShowMiniPlayer(false)}
+      />
     </>
   );
 }

@@ -1,10 +1,10 @@
 /**
- * MiniPlayer — a compact, always-visible floating player that persists
+ * MiniPlayer — a compact, click-activated floating player that persists
  * across tab navigation and browser sessions. It appears when the user 
- * minimises the main PlayerBar or when the main bar is scrolled off screen.
+ * activates it and stays on screen even when navigating back to the app.
  * Uses localStorage to remember visibility state across page exits/returns.
  */
-import { Play, Pause, SkipForward, X, ChevronUp, Heart, Music2 } from "lucide-react";
+import { Play, Pause, SkipForward, X, ChevronUp, Heart, Music2, Minimize2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { usePlayer } from "@/lib/player-store";
 import { useLocalLibrary } from "@/lib/local-library";
@@ -17,17 +17,22 @@ function fmt(s: number) {
   return `${m}:${sec.toString().padStart(2, "0")}`;
 }
 
-export function MiniPlayer({ onExpand }: { onExpand: () => void }) {
+export function MiniPlayer({ onExpand, onMinimize }: { onExpand: () => void; onMinimize?: () => void }) {
   const { current, isPlaying, toggle, next, progress, duration } = usePlayer();
   const { isLiked, toggleLike } = useLocalLibrary();
   const [dismissed, setDismissed] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [activated, setActivated] = useState(false);
 
   // Load visibility state from localStorage on mount
   useEffect(() => {
     const savedState = localStorage.getItem("sonexa.miniPlayer.dismissed");
+    const savedActivated = localStorage.getItem("sonexa.miniPlayer.activated");
     if (savedState === "true") {
       setDismissed(true);
+    }
+    if (savedActivated === "true") {
+      setActivated(true);
     }
     setMounted(true);
   }, []);
@@ -38,7 +43,20 @@ export function MiniPlayer({ onExpand }: { onExpand: () => void }) {
     localStorage.setItem("sonexa.miniPlayer.dismissed", String(dismissed));
   }, [dismissed, mounted]);
 
-  if (!current || dismissed) return null;
+  // Save activation state to localStorage
+  useEffect(() => {
+    if (!mounted) return;
+    localStorage.setItem("sonexa.miniPlayer.activated", String(activated));
+  }, [activated, mounted]);
+
+  // Auto-activate when music starts playing if not dismissed
+  useEffect(() => {
+    if (current && isPlaying && !dismissed && !activated) {
+      setActivated(true);
+    }
+  }, [current, isPlaying, dismissed, activated]);
+
+  if (!current || dismissed || !activated) return null;
 
   const pct = duration ? (progress / duration) * 100 : 0;
   const liked = isLiked(current.id);
@@ -74,6 +92,16 @@ export function MiniPlayer({ onExpand }: { onExpand: () => void }) {
               <ChevronUp className="h-3.5 w-3.5" />
             </button>
             <button
+              onClick={() => {
+                setActivated(false);
+                onMinimize?.();
+              }}
+              className="p-1 rounded-lg hover:bg-background/60 transition text-muted-foreground hover:text-foreground"
+              title="Minimize player"
+            >
+              <Minimize2 className="h-3.5 w-3.5" />
+            </button>
+            <button
               onClick={() => setDismissed(true)}
               className="p-1 rounded-lg hover:bg-background/60 transition text-muted-foreground hover:text-foreground"
               title="Close mini player"
@@ -91,6 +119,10 @@ export function MiniPlayer({ onExpand }: { onExpand: () => void }) {
               alt={current.title}
               className={`h-12 w-12 rounded-xl object-cover shadow-md ${isPlaying ? "animate-cover-pulse" : ""}`}
             />
+            {/* Sonexa watermark */}
+            <div className="absolute bottom-1 right-1">
+              <img src="/logo-icon.png" alt="Sonexa" className="h-3 w-3 rounded opacity-80" />
+            </div>
             {isPlaying && (
               <span className="absolute -bottom-1 -right-1 flex items-end gap-[2px] h-3.5 px-1 rounded-md bg-background/90 backdrop-blur shadow">
                 <span className="eq-bar w-[2px] h-2.5 bg-primary rounded-full" />

@@ -1062,10 +1062,10 @@ function DownloadManager() {
   return (
     <div className="mt-8 p-5 rounded-xl border border-border bg-card/40">
       <div className="flex items-center gap-2 text-sm font-semibold">
-        <Download className="h-4 w-4 text-primary" /> Bulk YouTube Backup Download
+        <Download className="h-4 w-4 text-primary" /> Bulk YouTube MP3 Download (RapidAPI)
       </div>
       <p className="mt-2 text-xs text-muted-foreground">
-        Download YouTube tracks as MP4 backups for offline playback. Skips tracks that already have backups.
+        Download YouTube tracks as MP3 backups using RapidAPI. Falls back to backend service if RapidAPI fails. Skips tracks that already have backups.
       </p>
 
       {/* Download Controls */}
