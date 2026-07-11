@@ -55,6 +55,10 @@ import {
   adminCancelDownload,
   adminDiscoverYouTubeContent,
   adminAutoDiscoverTamilContent,
+  adminCreateRadioStation,
+  adminUpdateRadioStation,
+  adminDeleteRadioStation,
+  listRadioStations,
 } from "@/lib/api/youtube.functions";
 import {
   adminSetFeatureConfig,
@@ -250,6 +254,7 @@ function Admin() {
 
       <ApiKeyManager />
       <YouTubeAdder />
+      <RadioStationManager />
       <DownloadScheduler />
       <DiscoveryScheduler />
       <DownloadManager />
@@ -990,6 +995,267 @@ function YouTubeAdder() {
               </div>
             );
           })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RadioStationManager() {
+  const listStations = useServerFn(listRadioStations);
+  const createStation = useServerFn(adminCreateRadioStation);
+  const updateStation = useServerFn(adminUpdateRadioStation);
+  const deleteStation = useServerFn(adminDeleteRadioStation);
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-radio-stations"],
+    queryFn: () => listStations(),
+  });
+  
+  const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [icon, setIcon] = useState("Radio");
+  const [color, setColor] = useState("from-purple-500 to-pink-500");
+  const [basedOn, setBasedOn] = useState<"song" | "artist" | "genre" | "custom">("custom");
+  const [busy, setBusy] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const stations = (data?.stations ?? []) as Array<{
+    id: string;
+    name: string;
+    description: string;
+    youtube_url: string;
+    youtube_video_id: string;
+    icon: string;
+    color: string;
+    based_on: string;
+    created_at: string;
+  }>;
+
+  async function handleCreate() {
+    if (!name.trim() || !description.trim() || !youtubeUrl.trim()) {
+      return toast.error("Fill all fields");
+    }
+    setBusy(true);
+    try {
+      await createStation({
+        data: {
+          name: name.trim(),
+          description: description.trim(),
+          youtubeUrl: youtubeUrl.trim(),
+          icon,
+          color,
+          basedOn,
+        },
+      });
+      toast.success("Radio station created");
+      setName("");
+      setDescription("");
+      setYoutubeUrl("");
+      qc.invalidateQueries({ queryKey: ["admin-radio-stations"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to create station");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleUpdate(stationId: string) {
+    if (!name.trim() || !description.trim() || !youtubeUrl.trim()) {
+      return toast.error("Fill all fields");
+    }
+    setBusy(true);
+    try {
+      await updateStation({
+        data: {
+          stationId,
+          name: name.trim(),
+          description: description.trim(),
+          youtubeUrl: youtubeUrl.trim(),
+          icon,
+          color,
+          basedOn,
+        },
+      });
+      toast.success("Radio station updated");
+      setEditingId(null);
+      setName("");
+      setDescription("");
+      setYoutubeUrl("");
+      qc.invalidateQueries({ queryKey: ["admin-radio-stations"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update station");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete(stationId: string) {
+    if (!confirm("Delete this radio station?")) return;
+    setBusy(true);
+    try {
+      await deleteStation({ data: { stationId } });
+      toast.success("Radio station deleted");
+      qc.invalidateQueries({ queryKey: ["admin-radio-stations"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete station");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(station: typeof stations[0]) {
+    setEditingId(station.id);
+    setName(station.name);
+    setDescription(station.description);
+    setYoutubeUrl(station.youtube_url);
+    setIcon(station.icon);
+    setColor(station.color);
+    setBasedOn(station.based_on as any);
+  }
+
+  function cancelEdit() {
+    setEditingId(null);
+    setName("");
+    setDescription("");
+    setYoutubeUrl("");
+  }
+
+  return (
+    <div className="mt-8 p-5 rounded-xl border border-border bg-card/40">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Youtube className="h-4 w-4 text-primary" /> Radio Stations
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Manage radio stations with YouTube URLs. Admin can create, update, and delete stations.
+      </p>
+
+      {/* Create/Edit Form */}
+      <div className="mt-4 p-4 rounded-lg bg-background/50 border border-border space-y-3">
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Station name"
+          className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm"
+        />
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          placeholder="Description"
+          className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm"
+        />
+        <input
+          value={youtubeUrl}
+          onChange={(e) => setYoutubeUrl(e.target.value)}
+          placeholder="YouTube URL (https://www.youtube.com/watch?v=...)"
+          className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm"
+        />
+        <div className="grid grid-cols-2 gap-2">
+          <select
+            value={icon}
+            onChange={(e) => setIcon(e.target.value)}
+            className="px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          >
+            <option value="Radio">Radio</option>
+            <option value="Sparkles">Sparkles</option>
+            <option value="Music2">Music</option>
+            <option value="Flame">Flame</option>
+            <option value="Clock">Clock</option>
+            <option value="TrendingUp">Trending</option>
+            <option value="Heart">Heart</option>
+          </select>
+          <select
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            className="px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          >
+            <option value="from-purple-500 to-pink-500">Purple Pink</option>
+            <option value="from-green-500 to-teal-500">Green Teal</option>
+            <option value="from-blue-500 to-indigo-500">Blue Indigo</option>
+            <option value="from-cyan-500 to-blue-500">Cyan Blue</option>
+            <option value="from-orange-500 to-red-500">Orange Red</option>
+            <option value="from-yellow-500 to-orange-500">Yellow Orange</option>
+          </select>
+        </div>
+        <select
+          value={basedOn}
+          onChange={(e) => setBasedOn(e.target.value as any)}
+          className="px-3 py-2 rounded-lg bg-input border border-border text-sm"
+        >
+          <option value="custom">Custom</option>
+          <option value="song">Based on Song</option>
+          <option value="artist">Based on Artist</option>
+          <option value="genre">Based on Genre</option>
+        </select>
+        <div className="flex gap-2">
+          {editingId ? (
+            <>
+              <button
+                onClick={() => handleUpdate(editingId)}
+                disabled={busy}
+                className="flex-1 px-4 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60"
+              >
+                {busy ? "Updating..." : "Update Station"}
+              </button>
+              <button
+                onClick={cancelEdit}
+                disabled={busy}
+                className="px-4 py-2 rounded-lg bg-background/60 hover:bg-background text-sm"
+              >
+                Cancel
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={handleCreate}
+              disabled={busy}
+              className="flex-1 px-4 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60"
+            >
+              {busy ? "Creating..." : "Create Station"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Stations List */}
+      {isLoading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Loading stations...</p>
+      ) : stations.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">No radio stations created yet.</p>
+      ) : (
+        <div className="mt-4 space-y-2">
+          {stations.map((station) => (
+            <div
+              key={station.id}
+              className="flex items-center gap-3 p-3 rounded-lg bg-background/40 border border-border"
+            >
+              <div className={`h-12 w-12 rounded-lg bg-gradient-to-br ${station.color} flex items-center justify-center text-white`}>
+                <Youtube className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-semibold">{station.name}</div>
+                <div className="text-xs text-muted-foreground truncate">{station.description}</div>
+                <div className="text-xs text-muted-foreground truncate">{station.youtube_url}</div>
+              </div>
+              <div className="flex gap-1">
+                <button
+                  onClick={() => startEdit(station)}
+                  disabled={busy}
+                  className="p-2 rounded-md bg-background/60 hover:bg-background"
+                >
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => handleDelete(station.id)}
+                  disabled={busy}
+                  className="p-2 rounded-md bg-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>

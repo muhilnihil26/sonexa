@@ -1,0 +1,81 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() {
+      return signedIn() && request.auth.token.email == "muhilsiddhesh.in@gmail.com";
+    }
+
+    match /sonexa_youtube_tracks/{videoId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sonexa_youtube_playlists/{playlistId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sonexa_youtube_requests/{requestId} {
+      allow create: if signedIn()
+        && request.resource.data.requested_by == request.auth.uid
+        && request.resource.data.status == "pending";
+      allow update: if isAdmin() || (
+        signedIn()
+        && resource.data.requested_by == request.auth.uid
+        && request.resource.data.requested_by == request.auth.uid
+        && request.resource.data.status == "pending"
+      );
+      allow read: if isAdmin() || (signedIn() && resource.data.requested_by == request.auth.uid);
+      allow delete: if false;
+    }
+
+    match /sonexa_songs/{songId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sonexa_api_keys/{keyId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sonexa_song_stats/{trackId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if isAdmin();
+    }
+
+    match /sonexa_song_likes/{likeId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.resource.data.user_id == request.auth.uid;
+      allow delete: if false;
+    }
+
+    match /sonexa_song_comments/{commentId} {
+      allow read: if true;
+      allow create: if signedIn() && request.resource.data.user_id == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    match /sonexa_settings/{settingId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sonexa_remote_sessions/{code} {
+      allow read, create, update: if signedIn();
+      allow delete: if isAdmin();
+    }
+
+    match /sonexa_schedules/{scheduleId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /sonexa_radio_stations/{stationId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}
