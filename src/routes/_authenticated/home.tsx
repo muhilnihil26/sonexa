@@ -163,7 +163,7 @@ function Home() {
         )}
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-card/55 p-6 shadow-card animate-fade-up sm:p-8 md:p-10">
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card/55 p-6 shadow-card animate-fade-up sm:p-8 md:p-10 hover:shadow-glow transition-shadow duration-500">
         <div 
           className="absolute inset-0 bg-cover bg-center mix-blend-overlay" 
           style={{ 
@@ -175,42 +175,42 @@ function Home() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,oklch(0.7_0.24_350/.18),transparent_32%),radial-gradient(circle_at_0%_100%,oklch(0.78_0.18_60/.12),transparent_30%)]" />
         <div className="relative grid gap-6 lg:grid-cols-[1fr_300px] lg:items-center">
           <div>
-            <p className="text-sm text-muted-foreground">{greet},</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight capitalize sm:text-4xl md:text-5xl">
+            <p className="text-sm text-muted-foreground animate-fade-up" style={{ animationDelay: '0.1s' }}>{greet},</p>
+            <h1 className="mt-1 text-3xl font-black tracking-tight capitalize sm:text-4xl md:text-5xl animate-3d-text">
               {name}
             </h1>
-            <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
+            <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base animate-fade-up" style={{ animationDelay: '0.2s' }}>
               Premium Spotify-style streaming interface, customized for your vibe.
             </p>
             {!isNativeApp && (
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3 animate-fade-up" style={{ animationDelay: '0.3s' }}>
                 <AndroidDownloadChooser
                   label="Android App"
-                  className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-background shadow-glow transition hover:scale-[1.02] lg:hidden"
+                  className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-background shadow-glow transition hover:scale-[1.02] hover:shadow-glow lg:hidden"
                 />
                 <div className="hidden lg:flex gap-3">
                   <a
                     href="/sonexa-windows-installer.exe"
                     download
-                    className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-background shadow-glow transition hover:scale-[1.02]"
+                    className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-background shadow-glow transition hover:scale-[1.02] hover:shadow-glow"
                   >
                     <Download className="h-4 w-4" />
                     Windows App
                   </a>
                   <AndroidDownloadChooser
                     label="Android App"
-                    className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-primary/20"
+                    className="inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-primary/20 hover:scale-[1.02]"
                   />
                 </div>
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-4 animate-fade-up" style={{ animationDelay: '0.4s' }}>
             <MusicClock />
             {featureConfig?.radioEnabled && (
               <button 
                 onClick={() => startRadio(catalog.allTracks, user?.email ?? user?.id ?? "")}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-primary text-background font-bold shadow-glow hover:scale-[1.02] transition"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-primary text-background font-bold shadow-glow hover:scale-[1.02] hover:shadow-glow transition animate-pulse-glow"
               >
                 <Radio className="h-5 w-5" /> Start Sonexa Radio
               </button>

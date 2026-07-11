@@ -44,7 +44,12 @@ function parseSynced(lrc: string): LyricLine[] {
 async function fetchFromLrclib(title: string, artist: string): Promise<LyricsResult | null> {
   try {
     const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(url, { 
+      signal: AbortSignal.timeout(8000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
     
     if (res.status === 404) return null; // Not found, try next source
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -71,21 +76,32 @@ async function fetchFromSearch(title: string, artist: string): Promise<LyricsRes
     
     // Try multiple search variations
     const queries = [
-      `${normalTitle} ${normalArtist} lyrics`,
-      `${normalTitle} lyrics`,
+      `${normalTitle} ${normalArtist}`,
+      `${normalTitle}`,
       `${artist} ${title}`,
+      `${title} ${artist}`,
     ];
 
     for (const query of queries) {
       const url = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { signal: AbortSignal.timeout(5000) });
+      const res = await fetch(url, { 
+        signal: AbortSignal.timeout(8000),
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+      });
       
       if (!res.ok) continue;
       
       const results = await res.json() as Array<{ id: number; title: string; artist: string; syncedLyrics?: string | null; plainLyrics?: string | null }>;
       
       if (results.length > 0) {
-        const best = results[0]; // Take first result
+        // Find best match by similarity
+        const best = results.find(r => 
+          r.title.toLowerCase().includes(normalTitle) || 
+          normalTitle.includes(r.title.toLowerCase())
+        ) || results[0];
+        
         const synced = best.syncedLyrics ? parseSynced(best.syncedLyrics) : null;
         const plain = best.plainLyrics ?? (synced ? synced.map((l) => l.text).join("\n") : "");
         
@@ -97,6 +113,34 @@ async function fetchFromSearch(title: string, artist: string): Promise<LyricsRes
     return null;
   } catch (e) {
     console.error("search error:", e);
+    return null;
+  }
+}
+
+async function fetchFromGenius(title: string, artist: string): Promise<LyricsResult | null> {
+  try {
+    // Use Genius API as fallback (requires API key, but we can try public search)
+    // For now, we'll use a simpler approach - search via a lyrics API
+    const query = encodeURIComponent(`${title} ${artist}`);
+    const url = `https://api.lyrics.ovh/v1/${artist}/${title}`;
+    
+    const res = await fetch(url, { 
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!res.ok) return null;
+    
+    const plain = await res.text();
+    
+    if (plain && plain.trim() && !plain.includes("Lyrics not found")) {
+      return { status: "found", synced: null, plain };
+    }
+    return null;
+  } catch (e) {
+    console.error("genius/lyrics.ovh error:", e);
     return null;
   }
 }
@@ -124,6 +168,11 @@ export async function fetchLyrics(title: string, artist: string): Promise<Lyrics
     // Try fallback sources
     if (!result) {
       result = await fetchFromSearch(title, artist);
+    }
+    
+    // Try lyrics.ovh as final fallback
+    if (!result) {
+      result = await fetchFromGenius(title, artist);
     }
     
     // If nothing found

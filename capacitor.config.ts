@@ -4,8 +4,6 @@ const config: CapacitorConfig = {
   appId: "com.sonexa.war",
   appName: "Sonexa",
   webDir: "build/capacitor-web",
-  bundledWebRuntime: false,
-  version: "1.0.0",
   android: {
     backgroundColor: "#08080c",
     buildOptions: {

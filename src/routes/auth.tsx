@@ -119,23 +119,29 @@ function AuthPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <div className="w-full max-w-md">
-        <div className="text-center mb-8">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4 relative overflow-hidden">
+      {/* Background decorative elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '0s' }} />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '2s' }} />
+      </div>
+      
+      <div className="w-full max-w-md relative z-10">
+        <div className="text-center mb-8 animate-fade-up">
           <Brand />
         </div>
 
         {!verifyEmail ? (
-          <div className="rounded-2xl border border-border bg-card/40 backdrop-blur-xl p-6 shadow-2xl">
+          <div className="rounded-2xl border border-border bg-card/40 backdrop-blur-xl p-6 shadow-2xl animate-fade-up hover:shadow-glow transition-shadow duration-500" style={{ animationDelay: '0.1s' }}>
             <div className="flex items-center justify-center gap-2 mb-6">
-              <Music2 className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">{mode === "signin" ? "Welcome back" : "Create account"}</h1>
+              <Music2 className="h-6 w-6 text-primary animate-3d-float" />
+              <h1 className="text-2xl font-bold animate-3d-text">{mode === "signin" ? "Welcome back" : "Create account"}</h1>
             </div>
 
             {/* Audio Trial Button */}
             <button
               onClick={playAudioTrial}
-              className="w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 transition"
+              className="w-full mb-6 flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-primary/10 hover:bg-primary/20 border border-primary/30 transition hover:scale-[1.02] hover:shadow-glow"
             >
               {isPlayingTrial ? (
                 <>
@@ -152,37 +158,37 @@ function AuthPage() {
 
             <form onSubmit={submit} className="space-y-4">
               {mode === "signup" && (
-                <div>
+                <div className="animate-fade-up" style={{ animationDelay: '0.2s' }}>
                   <label className="block text-sm font-medium mb-2">Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="Your name"
-                    className="w-full px-4 py-3 rounded-xl border border-border bg-input focus:border-primary focus:outline-none transition"
+                    className="w-full px-4 py-3 rounded-xl border border-border bg-input focus:border-primary focus:outline-none transition hover:border-primary/50"
                     required
                   />
                 </div>
               )}
-              <div>
+              <div className="animate-fade-up" style={{ animationDelay: '0.3s' }}>
                 <label className="block text-sm font-medium mb-2">Email</label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-input focus:border-primary focus:outline-none transition"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-input focus:border-primary focus:outline-none transition hover:border-primary/50"
                   required
                 />
               </div>
-              <div>
+              <div className="animate-fade-up" style={{ animationDelay: '0.4s' }}>
                 <label className="block text-sm font-medium mb-2">Password</label>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full px-4 py-3 rounded-xl border border-border bg-input focus:border-primary focus:outline-none transition"
+                  className="w-full px-4 py-3 rounded-xl border border-border bg-input focus:border-primary focus:outline-none transition hover:border-primary/50"
                   required
                   minLength={6}
                 />
@@ -190,13 +196,14 @@ function AuthPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full py-3 rounded-xl bg-brand-gradient text-background font-bold shadow-glow hover:scale-[1.02] transition disabled:opacity-50"
+                className="w-full py-3 rounded-xl bg-brand-gradient text-background font-bold shadow-glow hover:scale-[1.02] hover:shadow-glow transition disabled:opacity-50 animate-pulse-glow"
+                style={{ animationDelay: '0.5s' }}
               >
                 {busy ? "Processing..." : mode === "signin" ? "Sign in" : "Create account"}
               </button>
             </form>
 
-            <div className="mt-6">
+            <div className="mt-6 animate-fade-up" style={{ animationDelay: '0.6s' }}>
               <div className="relative">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-border" />
@@ -208,7 +215,7 @@ function AuthPage() {
               <button
                 onClick={google}
                 disabled={busy}
-                className="mt-4 w-full py-3 rounded-xl border border-border bg-background/60 hover:bg-background transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="mt-4 w-full py-3 rounded-xl border border-border bg-background/60 hover:bg-background transition flex items-center justify-center gap-2 disabled:opacity-50 hover:scale-[1.02] hover:shadow-glow"
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -220,21 +227,21 @@ function AuthPage() {
               </button>
             </div>
 
-            <p className="mt-6 text-center text-sm text-muted-foreground">
+            <p className="mt-6 text-center text-sm text-muted-foreground animate-fade-up" style={{ animationDelay: '0.7s' }}>
               {mode === "signin" ? "Don't have an account? " : "Already have an account? "}
               <button
                 onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-                className="text-primary font-semibold hover:underline"
+                className="text-primary font-semibold hover:underline hover:text-primary/80 transition"
               >
                 {mode === "signin" ? "Sign up" : "Sign in"}
               </button>
             </p>
           </div>
         ) : (
-          <div className="rounded-2xl border border-border bg-card/40 backdrop-blur-xl p-6 shadow-2xl text-center">
+          <div className="rounded-2xl border border-border bg-card/40 backdrop-blur-xl p-6 shadow-2xl text-center animate-fade-up hover:shadow-glow transition-shadow duration-500">
             <div className="flex items-center justify-center gap-2 mb-4">
-              <Sparkles className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">Verify your email</h1>
+              <Sparkles className="h-6 w-6 text-primary animate-3d-float" />
+              <h1 className="text-2xl font-bold animate-3d-text">Verify your email</h1>
             </div>
             <p className="text-muted-foreground mb-6">
               We sent a verification link to <strong>{verifyEmail}</strong>. Click it to activate your account.
@@ -242,7 +249,7 @@ function AuthPage() {
             <button
               onClick={resendVerification}
               disabled={busy}
-              className="px-6 py-3 rounded-xl bg-brand-gradient text-background font-bold shadow-glow hover:scale-[1.02] transition disabled:opacity-50"
+              className="px-6 py-3 rounded-xl bg-brand-gradient text-background font-bold shadow-glow hover:scale-[1.02] hover:shadow-glow transition disabled:opacity-50 animate-pulse-glow"
             >
               {busy ? "Sending..." : "Resend verification email"}
             </button>
@@ -254,7 +261,7 @@ function AuthPage() {
                     if (user && !needsEmailVerification(user)) nav({ to: "/home" });
                   });
                 }}
-                className="text-primary font-semibold hover:underline"
+                className="text-primary font-semibold hover:underline hover:text-primary/80 transition"
               >
                 Continue to Sonexa
               </button>

@@ -93,7 +93,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 };
 
 export function RadioStations() {
-  const { current, startRadio } = usePlayer();
+  const p = usePlayer();
+  const { current, startRadio } = p;
   const { user } = useSession();
   const listStations = useServerFn(listRadioStations);
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
@@ -115,14 +116,34 @@ export function RadioStations() {
     setSelectedStation(station.id);
     
     try {
-      // If station has a YouTube URL, play it directly
+      // If station has a YouTube URL, fetch and play the video
       if (station.youtube_url && station.youtube_video_id) {
-        // Use the YouTube video as the seed for radio
-        const mockCatalog = current ? [current] : [];
-        await startRadio(mockCatalog, user.email || user.id || "default");
-        notifySuccess(`Playing ${station.name}`);
+        const { lookupVideo } = await import("@/lib/api/youtube.functions");
+        const lookupFn = useServerFn(lookupVideo);
+        
+        const videoData = await lookupFn({ data: { url: station.youtube_url } });
+        
+        if (videoData) {
+          // Play the YouTube video directly
+          const track = {
+            id: videoData.id,
+            title: videoData.title,
+            artist: videoData.artist,
+            cover: videoData.cover,
+            kind: "youtube" as const,
+            youtube_video_id: videoData.youtube_video_id,
+            duration: videoData.duration,
+          };
+          
+          // Use the player to play this track and start radio
+          p.play(track);
+          await startRadio([track], user.email || user.id || "default");
+          notifySuccess(`Playing ${station.name}`);
+        } else {
+          throw new Error("Could not fetch video data");
+        }
       } else {
-        // For predefined stations, use mock catalog
+        // For predefined stations, use current track as seed or fetch trending
         const mockCatalog = current ? [current] : [];
         await startRadio(mockCatalog, user.email || user.id || "default");
         notifySuccess(`Playing ${station.name}`);

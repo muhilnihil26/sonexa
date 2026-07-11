@@ -5,6 +5,8 @@ import { useLocalLibrary } from "@/lib/local-library";
 import { toast } from "sonner";
 import { useSession } from "@/lib/auth";
 import { saveOfflineTrack } from "@/lib/offline-library";
+import { useServerFn } from "@tanstack/react-start";
+import { toggleSongLike } from "@/lib/api/social.functions";
 
 export function SongCard({
   track,
@@ -16,28 +18,60 @@ export function SongCard({
   playAsQueue?: boolean;
 }) {
   const { current, isPlaying, play, toggle, queue: playQueue, addToQueue } = usePlayer();
-  const { isLiked, toggleLike, playlists, createPlaylist, addToPlaylist } = useLocalLibrary();
+  const { isLiked, toggleLike: toggleLocalLike, playlists, createPlaylist, addToPlaylist } = useLocalLibrary();
   const { user } = useSession();
+  const likeSongFn = useServerFn(toggleSongLike);
   const [menu, setMenu] = useState(false);
   const active = current?.id === track.id;
   const liked = isLiked(track.id);
   const canDownload = track.kind !== "youtube" && !!track.audio;
   const queued = playQueue.some((item) => item.id === track.id);
 
-  function downloadTrack(e: React.MouseEvent) {
+  async function requestBackup(e: React.MouseEvent) {
     e.stopPropagation();
-    const a = document.createElement("a");
-    a.href = track.audio;
-    a.download = `${track.artist ? `${track.artist} - ` : ""}${track.title}`.replace(
-      /[\\/:*?"<>|]+/g,
-      "-",
-    );
-    a.rel = "noopener";
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    saveOfflineTrack(track, user?.email);
-    toast.success("Download started");
+    if (!track.kind || track.kind !== "youtube") {
+      toast.error("Only YouTube videos can be backed up");
+      return;
+    }
+    
+    try {
+      const response = await fetch("/api/backup/request", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          videoId: track.youtube_video_id,
+          title: track.title,
+          artist: track.artist,
+        }),
+      });
+      
+      if (response.ok) {
+        toast.success("Backup requested - will be available soon");
+      } else {
+        toast.error("Could not request backup");
+      }
+    } catch (error) {
+      toast.error("Failed to request backup");
+    }
+  }
+
+  async function handleLike(e: React.MouseEvent) {
+    e.stopPropagation();
+    
+    // Always toggle local like
+    toggleLocalLike(track);
+    
+    // If user is signed in, also sync to server
+    if (user) {
+      try {
+        await likeSongFn({ data: { trackId: track.id } });
+      } catch (error) {
+        console.error("Failed to sync like to server:", error);
+        // Don't show error since local like succeeded
+      }
+    }
+    
+    toast.success(liked ? "Removed from Liked" : "Added to Liked");
   }
 
   async function shareTrack(e: React.MouseEvent) {
@@ -114,11 +148,7 @@ export function SongCard({
           <ListPlus className="h-4 w-4" />
         </button>
         <button
-          onClick={(e) => {
-            e.stopPropagation();
-            toggleLike(track);
-            toast.success(liked ? "Removed from Liked" : "Added to Liked");
-          }}
+          onClick={handleLike}
           className={`h-8 w-8 rounded-full grid place-items-center backdrop-blur-md transition ${liked ? "bg-primary text-background" : "bg-background/70 hover:bg-background text-foreground/80"}`}
           title={liked ? "Unlike" : "Like"}
         >
@@ -134,6 +164,15 @@ export function SongCard({
         >
           <Plus className="h-4 w-4" />
         </button>
+        {track.kind === "youtube" && (
+          <button
+            onClick={requestBackup}
+            className="h-8 w-8 rounded-full grid place-items-center bg-background/70 hover:bg-background backdrop-blur-md text-foreground/80"
+            title="Request backup"
+          >
+            <Download className="h-4 w-4" />
+          </button>
+        )}
         {canDownload && (
           <button
             onClick={downloadTrack}

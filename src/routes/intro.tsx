@@ -52,43 +52,50 @@ function IntroPage() {
         <Brand />
         <Link
           to={appLink}
-          className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+          className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background hover:scale-105 transition-transform"
         >
           {appLabel}
         </Link>
       </header>
       <main className="relative z-10 mx-auto grid min-h-[calc(100svh-96px)] max-w-7xl items-center gap-8 px-5 pb-24 sm:px-6 md:grid-cols-[1.1fr_.9fr] md:gap-10 md:px-12 2xl:max-w-[92rem]">
         <section>
-          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-xs text-muted-foreground backdrop-blur">
+          <p className="mb-4 inline-flex items-center gap-2 rounded-full border border-border bg-card/50 px-3 py-1 text-xs text-muted-foreground backdrop-blur animate-fade-up">
             <Sparkles className="h-3.5 w-3.5 text-primary" /> Double-click logo intro
           </p>
-          <h1 className="text-5xl font-black tracking-tight md:text-7xl">
-            {data?.title || "Listen Beyond Limits"}
+          <h1 className="text-5xl font-black tracking-tight md:text-7xl animate-3d-text">
+            <span className="inline-block animate-3d-float" style={{ animationDelay: '0s' }}>
+              {data?.title?.split(' ')[0] || "Listen"}
+            </span>
+            <span className="inline-block animate-3d-float" style={{ animationDelay: '0.2s' }}>
+              {data?.title?.split(' ').slice(1).join(' ') || "Beyond Limits"}
+            </span>
           </h1>
-          <p className="mt-5 max-w-2xl text-lg text-muted-foreground">
+          <p className="mt-5 max-w-2xl text-lg text-muted-foreground animate-fade-up" style={{ animationDelay: '0.4s' }}>
             Sonexa brings admin-approved YouTube full songs, iTunes previews, local backups,
             comments, likes, shares, playlists, and AI-assisted discovery into one player.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-8 flex flex-wrap gap-3 animate-fade-up" style={{ animationDelay: '0.6s' }}>
             <button
               onClick={() => setMusicStarted(true)}
               disabled={!videoId || musicStarted}
-              className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3 font-semibold text-background shadow-glow disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-6 py-3 font-semibold text-background shadow-glow disabled:opacity-50 hover:scale-105 transition-transform animate-pulse-glow"
             >
               <Play className="h-4 w-4 fill-background" />
               {musicStarted ? "Music playing" : "Start intro music"}
             </button>
             <Link
               to={appLink}
-              className="inline-flex items-center rounded-full border border-border bg-card/50 px-6 py-3 font-semibold backdrop-blur"
+              className="inline-flex items-center rounded-full border border-border bg-card/50 px-6 py-3 font-semibold backdrop-blur hover:scale-105 transition-transform hover:bg-card/70"
             >
               {appLabel}
             </Link>
           </div>
         </section>
         <section className="grid gap-4">
-          <MusicClock />
-          <div className="relative overflow-hidden rounded-xl border border-border bg-card/55 p-5 backdrop-blur">
+          <div className="animate-fade-up" style={{ animationDelay: '0.8s' }}>
+            <MusicClock />
+          </div>
+          <div className="relative overflow-hidden rounded-xl border border-border bg-card/55 p-5 backdrop-blur animate-fade-up" style={{ animationDelay: '1s' }}>
             <div className="absolute inset-0 bg-glow opacity-60 animate-gradient-pan" />
             <div className="relative flex h-28 items-end justify-center gap-2">
               {Array.from({ length: 18 }).map((_, index) => (
@@ -124,10 +131,11 @@ function IntroPage() {
               title: "Community layer",
               text: "View counts, likes, and comments sit on top of every song.",
             },
-          ].map((feature) => (
+          ].map((feature, index) => (
             <div
               key={feature.title}
-              className="rounded-xl border border-border bg-card/55 p-4 backdrop-blur"
+              className="rounded-xl border border-border bg-card/55 p-4 backdrop-blur animate-fade-up hover:scale-105 transition-transform hover:shadow-glow"
+              style={{ animationDelay: `${1.2 + index * 0.1}s` }}
             >
               <feature.icon className="mb-3 h-5 w-5 text-primary" />
               <div className="font-semibold">{feature.title}</div>
