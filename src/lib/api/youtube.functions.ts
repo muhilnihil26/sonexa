@@ -464,6 +464,45 @@ export const adminRemoveYouTubeTrack = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const adminUpdateYouTubePlaylist = createServerFn({ method: "POST" })
+  .middleware([requireFirebaseAuth])
+  .inputValidator(
+    z.object({
+      playlistId: z.string().min(1),
+      title: z.string().min(1).max(200),
+      language: z.string().optional(),
+    }),
+  )
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    const existing = await getFirestoreDoc<Omit<YouTubePlaylistRow, "id">>(
+      `sonexa_youtube_playlists/${data.playlistId}`,
+      context.firebaseToken,
+    );
+    if (!existing) throw new Error("Playlist not found");
+    
+    await setFirestoreDoc(
+      `sonexa_youtube_playlists/${data.playlistId}`,
+      {
+        ...existing,
+        title: data.title,
+        language: data.language ?? existing.language,
+        updated_at: nowIso(),
+      },
+      context.firebaseToken,
+    );
+    return { ok: true };
+  });
+
+export const adminDeleteYouTubePlaylist = createServerFn({ method: "POST" })
+  .middleware([requireFirebaseAuth])
+  .inputValidator(z.object({ playlistId: z.string().min(1) }))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context);
+    await deleteFirestoreDoc(`sonexa_youtube_playlists/${data.playlistId}`, context.firebaseToken);
+    return { ok: true };
+  });
+
 export const adminCreateYouTubeBackupUploadUrl = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
   .inputValidator(

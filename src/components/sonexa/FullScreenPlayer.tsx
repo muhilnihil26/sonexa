@@ -18,6 +18,7 @@ import {
   SlidersHorizontal,
   Bluetooth,
   Minimize2,
+  Maximize2,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -46,6 +47,7 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
   const addComment = useServerFn(addSongComment);
   const [panel, setPanel] = useState<"none" | "queue" | "lyrics" | "comments" | "sound">("lyrics");
   const [compactMode, setCompactMode] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [lyrics, setLyrics] = useState<LyricsResult | null>(null);
   const [lyricsLoading, setLyricsLoading] = useState(false);
   const [comment, setComment] = useState("");
@@ -87,6 +89,24 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
     p.setYTVideoVisible(open && p.current?.kind === "youtube");
     return () => p.setYTVideoVisible(false);
   }, [open, p.current?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggleFullscreen = () => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+      setIsFullscreen(true);
+    } else {
+      document.exitFullscreen();
+      setIsFullscreen(false);
+    }
+  };
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      setIsFullscreen(!!document.fullscreenElement);
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+  }, []);
 
   if (!open || !p.current) return null;
   const social = socialQuery.data;
@@ -205,6 +225,15 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
             >
               <Minimize2 className="h-6 w-6" />
             </button>
+            {isYouTube && (
+              <button
+                onClick={toggleFullscreen}
+                className={`p-2 rounded-full bg-black/20 hover:bg-card/60 transition backdrop-blur ${isFullscreen ? "text-primary" : ""}`}
+                title="Fullscreen"
+              >
+                {isFullscreen ? <Minimize2 className="h-6 w-6" /> : <Maximize2 className="h-6 w-6" />}
+              </button>
+            )}
             <button
               onClick={() => setPanel((s) => (s === "lyrics" ? "none" : "lyrics"))}
               className={`p-2 rounded-full bg-black/20 hover:bg-card/60 transition backdrop-blur ${panel === "lyrics" ? "text-primary" : ""}`}
@@ -748,10 +777,12 @@ function LyricsPanel({
             <div
               key={i}
               data-lline={i}
-              className={`text-base transition-all duration-200 ${
+              className={`text-base transition-all duration-300 ease-out ${
                 i === activeIdx
-                  ? "text-lg font-bold text-primary scale-105"
-                  : "text-muted-foreground"
+                  ? "text-xl font-bold text-primary scale-110 glow-pulse"
+                  : i === activeIdx - 1 || i === activeIdx + 1
+                  ? "text-base text-foreground/70 scale-105"
+                  : "text-sm text-muted-foreground"
               }`}
             >
               {l.text || "♪"}

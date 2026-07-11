@@ -1,0 +1,2 @@
+const __vite__mapDeps=(i,m=__vite__mapDeps,d=(m.f||(m.f=["assets/web-Dhy91h7q.js","assets/index-fJhw1S-c.js"])))=>i.map(i=>d[i]);
+import{am as o,an as i}from"./index-fJhw1S-c.js";const _=o("MediaSession",{web:()=>i(()=>import("./web-Dhy91h7q.js"),__vite__mapDeps([0,1])).then(e=>new e.MediaSessionWeb),ios:()=>i(()=>import("./web-Dhy91h7q.js"),__vite__mapDeps([0,1])).then(e=>new e.MediaSessionWeb)});export{_ as MediaSession};

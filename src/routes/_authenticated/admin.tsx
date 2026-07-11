@@ -59,6 +59,8 @@ import {
   adminUpdateRadioStation,
   adminDeleteRadioStation,
   listRadioStations,
+  adminUpdateYouTubePlaylist,
+  adminDeleteYouTubePlaylist,
 } from "@/lib/api/youtube.functions";
 import {
   adminSetFeatureConfig,
@@ -254,6 +256,7 @@ function Admin() {
 
       <ApiKeyManager />
       <YouTubeAdder />
+      <PlaylistManager />
       <RadioStationManager />
       <DownloadScheduler />
       <DiscoveryScheduler />
@@ -1253,6 +1256,170 @@ function RadioStationManager() {
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PlaylistManager() {
+  const listPlaylists = useServerFn(listAdminYouTubePlaylists);
+  const updatePlaylist = useServerFn(adminUpdateYouTubePlaylist);
+  const deletePlaylist = useServerFn(adminDeleteYouTubePlaylist);
+  const qc = useQueryClient();
+  const { data, isLoading } = useQuery({
+    queryKey: ["admin-playlists"],
+    queryFn: () => listPlaylists(),
+  });
+  
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editLanguage, setEditLanguage] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const playlists = (data?.playlists ?? []) as Array<{
+    id: string;
+    playlist_id: string;
+    title: string;
+    language: string | null;
+    tracks: any[];
+    created_at: string;
+  }>;
+
+  async function handleUpdate(playlistId: string) {
+    if (!editTitle.trim()) return toast.error("Title is required");
+    setBusy(true);
+    try {
+      await updatePlaylist({
+        data: {
+          playlistId,
+          title: editTitle.trim(),
+          language: editLanguage || undefined,
+        },
+      });
+      toast.success("Playlist updated");
+      setEditingId(null);
+      setEditTitle("");
+      setEditLanguage("");
+      qc.invalidateQueries({ queryKey: ["admin-playlists"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to update playlist");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleDelete(playlistId: string) {
+    if (!confirm("Delete this playlist? This will not delete the individual tracks.")) return;
+    setBusy(true);
+    try {
+      await deletePlaylist({ data: { playlistId } });
+      toast.success("Playlist deleted");
+      qc.invalidateQueries({ queryKey: ["admin-playlists"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to delete playlist");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function startEdit(playlist: typeof playlists[0]) {
+    setEditingId(playlist.playlist_id);
+    setEditTitle(playlist.title);
+    setEditLanguage(playlist.language || "");
+  }
+
+  return (
+    <div className="mt-8 p-5 rounded-xl border border-border bg-card/40">
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <Youtube className="h-4 w-4 text-primary" /> Playlists
+      </div>
+      <p className="mt-2 text-xs text-muted-foreground">
+        Manage YouTube playlists. Edit titles or delete playlists.
+      </p>
+
+      {isLoading ? (
+        <p className="mt-4 text-sm text-muted-foreground">Loading playlists...</p>
+      ) : playlists.length === 0 ? (
+        <p className="mt-4 text-sm text-muted-foreground">No playlists created yet.</p>
+      ) : (
+        <div className="mt-4 space-y-2">
+          {playlists.map((playlist) => (
+            <div
+              key={playlist.playlist_id}
+              className="flex items-center gap-3 p-3 rounded-lg bg-background/40 border border-border"
+            >
+              <div className="h-12 w-12 rounded-lg bg-brand-gradient flex items-center justify-center text-white">
+                <Youtube className="h-6 w-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                {editingId === playlist.playlist_id ? (
+                  <div className="space-y-2">
+                    <input
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      placeholder="Playlist title"
+                      className="w-full px-2 py-1 rounded bg-input border border-border text-sm"
+                    />
+                    <input
+                      value={editLanguage}
+                      onChange={(e) => setEditLanguage(e.target.value)}
+                      placeholder="Language (e.g., tamil)"
+                      className="w-full px-2 py-1 rounded bg-input border border-border text-sm"
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-sm font-semibold">{playlist.title}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {playlist.tracks.length} tracks • {playlist.language || "No language"}
+                    </div>
+                  </>
+                )}
+              </div>
+              <div className="flex gap-1">
+                {editingId === playlist.playlist_id ? (
+                  <>
+                    <button
+                      onClick={() => handleUpdate(playlist.playlist_id)}
+                      disabled={busy}
+                      className="p-2 rounded-md bg-primary/20 text-primary hover:bg-primary/30"
+                    >
+                      <Save className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingId(null);
+                        setEditTitle("");
+                        setEditLanguage("");
+                      }}
+                      disabled={busy}
+                      className="p-2 rounded-md bg-background/60 hover:bg-background"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => startEdit(playlist)}
+                      disabled={busy}
+                      className="p-2 rounded-md bg-background/60 hover:bg-background"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => handleDelete(playlist.playlist_id)}
+                      disabled={busy}
+                      className="p-2 rounded-md bg-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           ))}

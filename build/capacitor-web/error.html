@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Sonexa - Offline</title>
+  <style>
+    body {
+      background-color: #120f1f;
+      color: #ffffff;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      margin: 0;
+      text-align: center;
+      padding: 20px;
+      box-sizing: border-box;
+    }
+    .icon {
+      width: 100px;
+      height: 100px;
+      margin-bottom: 24px;
+      background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 32px rgba(168, 85, 247, 0.4);
+    }
+    .icon svg {
+      width: 48px;
+      height: 48px;
+      color: white;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 12px 0;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+    p {
+      color: #94a3b8;
+      font-size: 15px;
+      line-height: 1.5;
+      max-width: 300px;
+      margin: 0 0 32px 0;
+    }
+    button {
+      background: linear-gradient(135deg, #a855f7 0%, #3b82f6 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 100px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(168, 85, 247, 0.4);
+      transition: opacity 0.2s;
+      width: 100%;
+      max-width: 250px;
+    }
+    button:active {
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+  <div class="icon">
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2 2L22 22"/>
+      <path d="M8.5 8.5C10.5 7.1 13 6.5 15.5 6.9"/>
+      <path d="M16.88 11.23A10 10 0 0 1 20 12.5"/>
+      <path d="M5.05 5.05A14.96 14.96 0 0 1 12 3c3.4 0 6.5 1.1 9 3"/>
+      <path d="M21 16v.5"/>
+      <path d="M12 20h.01"/>
+      <path d="M8.5 16.5A5.5 5.5 0 0 1 12 15c.6 0 1.2.1 1.7.3"/>
+    </svg>
+  </div>
+  <h1>You're Offline</h1>
+  <p>Sonexa requires an internet connection for the first launch or when the cache is unavailable.</p>
+  <button onclick="window.location.href='https://sonexa-listen-beyond-main.vercel.app'">Try Again</button>
+  
+  <script>
+    // Auto retry when back online
+    window.addEventListener('online', () => {
+      window.location.href = 'https://sonexa-listen-beyond-main.vercel.app';
+    });
+  </script>
+</body>
+</html>

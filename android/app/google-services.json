@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "1076281487935",
+    "firebase_url": "https://sonexa-war-default-rtdb.firebaseio.com",
+    "project_id": "sonexa-war",
+    "storage_bucket": "sonexa-war.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1076281487935:android:c8808d5bb4386cba33be8a",
+        "android_client_info": {
+          "package_name": "com.sonexa.war"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1076281487935-nrf6l18sbjq6bn8d88na9oosbkqrqb29.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sonexa.war",
+            "certificate_hash": "376fd2d083cbe8893410b209caf776189855f2f2"
+          }
+        },
+        {
+          "client_id": "1076281487935-m7k6c3nocpo5dvj9tstid53tmclncvak.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDMfeJl-l7ZA1ccr7afY1T7CL-1FP4YXBU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1076281487935-m7k6c3nocpo5dvj9tstid53tmclncvak.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

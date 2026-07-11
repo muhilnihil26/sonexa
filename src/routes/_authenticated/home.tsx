@@ -1,10 +1,11 @@
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { Download, Heart, Play, Pause, Radio, Sparkles, Flame, PlayCircle, Settings2, ChevronDown } from "lucide-react";
+import { Download, Heart, Play, Pause, Radio, Sparkles, Flame, PlayCircle, Settings2, ChevronDown, ArrowRight, Shuffle, Headphones } from "lucide-react";
 import { Capacitor } from "@capacitor/core";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { MusicClock } from "@/components/sonexa/MusicClock";
 import { AndroidDownloadChooser } from "@/components/sonexa/AndroidDownloadChooser";
+import { RadioStations } from "@/components/sonexa/RadioStations";
 import { useSession } from "@/lib/auth";
 import { useLanguagePrefs } from "@/lib/language-prefs";
 import { isYtBroken, usePlayer, type Track } from "@/lib/player-store";
@@ -110,6 +111,9 @@ function Home() {
 
   const bgImage = homeConfig?.backgroundImageUrl || "/default-home-bg.png";
   const bgOpacity = homeConfig?.overlayOpacity ?? 0.2;
+  const spotlightPlaylist = smartPlaylists[0];
+  const radioQueue = catalog.allTracks.slice(0, Math.min(24, catalog.allTracks.length));
+  const recentQueue = recent.length > 0 ? recent : catalog.trending.slice(0, 6);
 
   return (
     <div className="space-y-8 p-4 sm:p-6 md:p-10 pb-36 max-w-7xl mx-auto">
@@ -215,20 +219,133 @@ function Home() {
         </div>
       </div>
 
+      <section className="animate-fade-up [animation-delay:80ms] [animation-fill-mode:both]">
+        <div className="flex items-end justify-between gap-4 mb-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Today on Sonexa</p>
+            <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">Quick taps, fresh mixes, one-thumb friendly.</h2>
+          </div>
+          <Link to="/browse" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
+            Explore <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+          <button
+            onClick={() => {
+              if (spotlightPlaylist?.tracks?.length) {
+                play(spotlightPlaylist.tracks[0], spotlightPlaylist.tracks);
+              }
+            }}
+            className="touch-card group relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,oklch(0.2_0_0),oklch(0.14_0_0))] p-5 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 active:scale-[0.99]"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,oklch(0.68_0.18_150/.18),transparent_35%),radial-gradient(circle_at_bottom_left,oklch(0.78_0.18_60/.12),transparent_32%)]" />
+            <div className="relative flex h-full min-h-40 flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary">
+                  <Shuffle className="h-5 w-5" />
+                </div>
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">Auto mix</span>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-bold tracking-tight">Daily Mix</h3>
+                <p className="mt-1 text-sm text-muted-foreground">A fresh stack from your current taste profile.</p>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{spotlightPlaylist?.tracks.length ?? 0} tracks ready</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-primary">Play mix <Play className="h-3.5 w-3.5 fill-current" /></span>
+              </div>
+            </div>
+          </button>
+
+          <button
+            onClick={() => startRadio(radioQueue, user?.email ?? user?.id ?? "")}
+            className="touch-card group relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,oklch(0.18_0_0),oklch(0.12_0_0))] p-5 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 active:scale-[0.99]"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,oklch(0.7_0.24_350/.16),transparent_34%),radial-gradient(circle_at_bottom_right,oklch(0.78_0.18_60/.12),transparent_30%)]" />
+            <div className="relative flex h-full min-h-40 flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary">
+                  <Radio className="h-5 w-5" />
+                </div>
+                <span className="rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">Live flow</span>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-bold tracking-tight">Start Radio</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Let Sonexa keep the room moving with the right follow-ups.</p>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Personalized by your library</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-primary">Start now <ArrowRight className="h-3.5 w-3.5" /></span>
+              </div>
+            </div>
+          </button>
+
+          <Link
+            to="/search"
+            className="touch-card group relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,oklch(0.2_0_0),oklch(0.16_0_0))] p-5 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 active:scale-[0.99]"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,oklch(0.68_0.18_150/.15),transparent_36%),radial-gradient(circle_at_bottom_left,oklch(0.6_0.2_320/.12),transparent_32%)]" />
+            <div className="relative flex h-full min-h-40 flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary">
+                  <Headphones className="h-5 w-5" />
+                </div>
+                <span className="rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-[11px] font-semibold text-muted-foreground">Search fast</span>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-bold tracking-tight">Find anything</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Search songs, artists, movie BGMs, or paste a YouTube link.</p>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Tap to jump in</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-primary">Open search <ArrowRight className="h-3.5 w-3.5" /></span>
+              </div>
+            </div>
+          </Link>
+
+          <button
+            onClick={() => {
+              const track = recentQueue[0] ?? catalog.trending[0];
+              if (track) play(track, recentQueue);
+            }}
+            className="touch-card group relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,oklch(0.18_0_0),oklch(0.1_0_0))] p-5 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 active:scale-[0.99]"
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,oklch(0.78_0.18_60/.16),transparent_35%),radial-gradient(circle_at_bottom_left,oklch(0.7_0.24_350/.12),transparent_32%)]" />
+            <div className="relative flex h-full min-h-40 flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary">Fresh replay</span>
+              </div>
+              <div className="mt-8">
+                <h3 className="text-lg font-bold tracking-tight">Jump Back In</h3>
+                <p className="mt-1 text-sm text-muted-foreground">Resume the last few listens without hunting for them.</p>
+              </div>
+              <div className="mt-4 flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">{recentQueue.length} recent picks</span>
+                <span className="inline-flex items-center gap-1 font-semibold text-primary">Replay <Play className="h-3.5 w-3.5 fill-current" /></span>
+              </div>
+            </div>
+          </button>
+        </div>
+      </section>
+
       {/* Recents Spotify-style grid layout */}
       {recent.length > 0 && (
         <section className="animate-fade-up duration-700">
           <h2 className="text-xl font-bold tracking-tight sm:text-2xl mb-4">Jump Back In</h2>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
             {recent.slice(0, 6).map((track) => (
               <button
                 key={track.id}
                 onClick={() => play(track, [track])}
-                className="group flex items-center h-16 bg-card/40 hover:bg-card/80 border border-border/30 rounded-lg overflow-hidden transition duration-300"
+                className="touch-card group flex min-h-16 items-center overflow-hidden rounded-2xl border border-border/30 bg-card/40 transition duration-300 hover:bg-card/80 active:scale-[0.99]"
               >
                 <img src={track.cover} alt="" className="h-16 w-16 object-cover shadow-md" />
-                <div className="flex-1 min-w-0 px-3 text-left">
+                <div className="min-w-0 flex-1 px-3 text-left">
                   <span className="block truncate text-sm font-bold text-foreground">{track.title}</span>
+                  <span className="block truncate text-xs text-muted-foreground">{track.artist}</span>
                 </div>
                 <div className="pr-3 opacity-0 group-hover:opacity-100 transition-opacity">
                   <PlayCircle className="h-8 w-8 text-primary drop-shadow-md" />
@@ -246,7 +363,7 @@ function Home() {
             <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Made for You</h2>
             <Link to="/browse" className="text-sm text-primary hover:underline">See all</Link>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5">
             {smartPlaylists.slice(0, 5).map((playlist) => (
               <button
                 key={playlist.id}
@@ -255,7 +372,7 @@ function Home() {
                     play(playlist.tracks[0], playlist.tracks);
                   }
                 }}
-                className="group relative aspect-square bg-card/40 hover:bg-card/80 border border-border/30 rounded-xl overflow-hidden transition duration-300"
+                className="touch-card group relative aspect-square overflow-hidden rounded-2xl border border-border/30 bg-card/40 transition duration-300 hover:bg-card/80 active:scale-[0.99]"
               >
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 <div className="absolute inset-0 flex flex-col justify-end p-3">
@@ -322,7 +439,7 @@ function Home() {
 
       <div className="space-y-10 xl:space-y-12 pb-10">
         {/* Trending Reels section */}
-        {catalog.reels.length > 0 && (
+      {catalog.reels.length > 0 && (
           <div className="animate-fade-up duration-700 [animation-delay:200ms] [animation-fill-mode:both]">
             <MusicReels tracks={catalog.reels} />
           </div>
@@ -349,7 +466,7 @@ function Home() {
                     key={pl.playlist_id}
                     to="/playlist/$id"
                     params={{ id: pl.playlist_id }}
-                    className="group flex flex-col p-3.5 rounded-2xl bg-card/40 hover:bg-card border border-border/40 hover:border-border transition duration-300 hover:shadow-glow hover:-translate-y-1"
+                    className="touch-card group flex flex-col rounded-2xl border border-border/40 bg-card/40 p-3.5 transition duration-300 hover:-translate-y-1 hover:bg-card hover:border-border hover:shadow-glow active:scale-[0.99]"
                   >
                     <div className="aspect-square w-full overflow-hidden rounded-xl bg-brand-gradient shadow-md relative flex items-center justify-center">
                       {pl.tracks?.[0]?.thumbnail && (
@@ -379,6 +496,16 @@ function Home() {
         {smartPlaylists.length > 0 && (
           <div className="animate-fade-up duration-700 [animation-delay:800ms] [animation-fill-mode:both]">
             <SmartPlaylistsSection playlists={smartPlaylists} />
+          </div>
+        )}
+
+        {/* Radio Stations Section */}
+        {featureConfig?.radioEnabled && (
+          <div className="animate-fade-up duration-700 [animation-delay:900ms] [animation-fill-mode:both]">
+            <section className="space-y-4">
+              <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Radio Stations</h2>
+              <RadioStations />
+            </section>
           </div>
         )}
 
@@ -568,13 +695,13 @@ function SmartPlaylistsSection({ playlists }: { playlists: any[] }) {
   return (
     <section className="space-y-4">
       <h2 className="text-xl font-bold tracking-tight sm:text-2xl">Made For You</h2>
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
         {playlists.map((pl) => (
           <Link
             key={pl.id}
             to="/playlist/$id"
             params={{ id: pl.id }}
-            className="group flex flex-col p-3.5 rounded-2xl bg-card/40 hover:bg-card border border-border/40 hover:border-border transition duration-300 hover:shadow-glow hover:-translate-y-1"
+            className="touch-card group flex flex-col rounded-2xl border border-border/40 bg-card/40 p-3.5 transition duration-300 hover:-translate-y-1 hover:bg-card hover:border-border hover:shadow-glow active:scale-[0.99]"
           >
             <div className="aspect-square rounded-xl overflow-hidden mb-3 bg-brand-gradient flex items-center justify-center relative shadow-md">
               {pl.cover ? (
