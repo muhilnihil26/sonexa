@@ -1,4 +1,4 @@
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Volume2, Maximize2, ListMusic, Plus, Heart, Minimize2, Wifi } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Volume2, Maximize2, ListMusic, Plus, Heart, Minimize2, Wifi, Moon, Clock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -12,6 +12,8 @@ import { recordListeningTaste } from "@/lib/listening-taste";
 import { useLocalLibrary } from "@/lib/local-library";
 import { MiniPlayer } from "./MiniPlayer";
 import { notifyDataSavingMode, requestNotificationPermission } from "@/lib/notifications";
+import { MusicVisualizer } from "./MusicVisualizer";
+import { QueueManager } from "./QueueManager";
 import { toast } from "sonner";
 
 function fmt(s: number) {
@@ -51,6 +53,11 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
   const [dataSavingMode, setDataSavingMode] = useState(false);
   const [lastCounted, setLastCounted] = useState("");
   const [lastTasteCounted, setLastTasteCounted] = useState("");
+  const [showSleepTimer, setShowSleepTimer] = useState(false);
+  const [sleepTimerMinutes, setSleepTimerMinutes] = useState(30);
+  const [sleepTimerActive, setSleepTimerActive] = useState(false);
+  const [sleepTimerRemaining, setSleepTimerRemaining] = useState(0);
+  const [showQueue, setShowQueue] = useState(false);
 
   // Load data saving mode from localStorage
   useEffect(() => {
@@ -84,6 +91,39 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
     document.addEventListener("click", handleInteraction, { once: true });
     return () => document.removeEventListener("click", handleInteraction);
   }, []);
+
+  // Sleep timer logic
+  useEffect(() => {
+    if (!sleepTimerActive || sleepTimerRemaining <= 0) return;
+    
+    const timer = setInterval(() => {
+      setSleepTimerRemaining((prev) => {
+        if (prev <= 1) {
+          toggle();
+          setSleepTimerActive(false);
+          toast.success("Sleep timer completed");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [sleepTimerActive, sleepTimerRemaining, toggle]);
+
+  const startSleepTimer = () => {
+    const seconds = sleepTimerMinutes * 60;
+    setSleepTimerRemaining(seconds);
+    setSleepTimerActive(true);
+    setShowSleepTimer(false);
+    toast.success(`Sleep timer set for ${sleepTimerMinutes} minutes`);
+  };
+
+  const cancelSleepTimer = () => {
+    setSleepTimerActive(false);
+    setSleepTimerRemaining(0);
+    toast.info("Sleep timer cancelled");
+  };
 
   const isTvPlatform = typeof window !== "undefined" && 
     (document.querySelector(".platform-tv") !== null || 
@@ -278,6 +318,14 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
                 <Repeat className="h-4 w-4" />
               </button>
             </div>
+            <div className="w-full h-8">
+              <MusicVisualizer 
+                isPlaying={isPlaying} 
+                audioElement={typeof window !== 'undefined' ? document.querySelector('audio') : null}
+                className="opacity-60"
+                barCount={24}
+              />
+            </div>
             <LyricsTicker />
             <div className="w-full flex items-center gap-2 text-[10px] text-muted-foreground">
               <span className="tabular-nums w-8 text-right">{fmt(progress)}</span>
@@ -329,7 +377,7 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
               <Heart className={`h-4 w-4 ${liked ? "fill-current" : ""}`} />
             </button>
             <button
-              onClick={() => setFull(true)}
+              onClick={() => setShowQueue(!showQueue)}
               className="text-muted-foreground hover:text-foreground transition"
               title="Queue"
             >
@@ -343,6 +391,57 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
             >
               <Plus className="h-4 w-4" />
             </button>
+            <div className="relative">
+              <button
+                onClick={() => setShowSleepTimer(!showSleepTimer)}
+                className={`transition ${sleepTimerActive ? "text-primary" : "text-muted-foreground hover:text-foreground"}`}
+                title="Sleep timer"
+              >
+                {sleepTimerActive ? <Clock className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+              {showSleepTimer && (
+                <div className="absolute bottom-full right-0 mb-2 p-3 rounded-xl border border-border bg-card shadow-glow z-50 min-w-48">
+                  {sleepTimerActive ? (
+                    <div className="space-y-3">
+                      <div className="text-center">
+                        <div className="text-lg font-bold text-primary">
+                          {Math.floor(sleepTimerRemaining / 60)}:{(sleepTimerRemaining % 60).toString().padStart(2, "0")}
+                        </div>
+                        <div className="text-xs text-muted-foreground">remaining</div>
+                      </div>
+                      <button
+                        onClick={cancelSleepTimer}
+                        className="w-full px-3 py-2 rounded-lg bg-destructive/10 text-destructive text-sm font-medium hover:bg-destructive/20 transition"
+                      >
+                        Cancel Timer
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="text-sm font-medium">Set sleep timer</div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {[15, 30, 45, 60, 90, 120].map((mins) => (
+                          <button
+                            key={mins}
+                            onClick={() => {
+                              setSleepTimerMinutes(mins);
+                              startSleepTimer();
+                            }}
+                            className={`px-2 py-1.5 rounded-lg text-xs font-medium transition ${
+                              sleepTimerMinutes === mins
+                                ? "bg-primary text-background"
+                                : "bg-background/60 hover:bg-background"
+                            }`}
+                          >
+                            {mins}m
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             <Volume2 className="h-4 w-4 text-muted-foreground" />
             <input
               type="range"
@@ -425,6 +524,13 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
           </div>
         </div>
       </div>
+      {showQueue && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-up">
+          <div className="w-full max-w-md h-[600px] rounded-2xl border border-border bg-card shadow-glow overflow-hidden">
+            <QueueManager onClose={() => setShowQueue(false)} />
+          </div>
+        </div>
+      )}
       <FullScreenPlayer open={full} onClose={() => setFull(false)} />
       <MiniPlayer 
         onExpand={() => setFull(true)} 

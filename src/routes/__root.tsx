@@ -144,16 +144,37 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
 
   useEffect(() => {
     document.getElementById("sonexa-native-boot")?.remove();
   }, []);
 
+  // Add page transition animations
+  useEffect(() => {
+    const handleRouteChange = () => {
+      // Add fade-in animation to body on route change
+      document.body.classList.add('animate-page-in');
+      setTimeout(() => {
+        document.body.classList.remove('animate-page-in');
+      }, 650);
+    };
+
+    // Subscribe to router changes
+    const unsubscribe = router.subscribe('onBeforeLoad', handleRouteChange);
+    
+    return () => {
+      unsubscribe();
+    };
+  }, [router]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <PlayerProvider>
         <TvRemoteFocus />
-        <Outlet />
+        <div className="min-h-screen animate-fade-up">
+          <Outlet />
+        </div>
         <Toaster theme="dark" position="top-center" />
       </PlayerProvider>
     </QueryClientProvider>

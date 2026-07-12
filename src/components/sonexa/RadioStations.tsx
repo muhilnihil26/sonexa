@@ -16,7 +16,7 @@ interface Station {
   youtube_video_id: string;
   icon: string;
   color: string;
-  based_on: "song" | "artist" | "genre" | "custom";
+  based_on: "song" | "artist" | "genre" | "custom" | "mood";
 }
 
 const PREDEFINED_STATIONS: Station[] = [
