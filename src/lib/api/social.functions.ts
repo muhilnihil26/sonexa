@@ -39,6 +39,7 @@ type IntroConfig = {
 type FeatureConfig = {
   itunes_enabled?: boolean | null;
   radio_enabled?: boolean | null;
+  player_transparency?: number | null;
   updated_at?: string | null;
 };
 
@@ -236,12 +237,16 @@ export const adminSetIntroConfig = createServerFn({ method: "POST" })
 
 export const getFeatureConfig = createServerFn({ method: "GET" }).handler(async () => {
   const config = await getFirestoreDoc<FeatureConfig>("sonexa_settings/features").catch(() => null);
-  return { itunesEnabled: config?.itunes_enabled === true, radioEnabled: config?.radio_enabled === true };
+  return { 
+    itunesEnabled: config?.itunes_enabled === true, 
+    radioEnabled: config?.radio_enabled === true,
+    playerTransparency: config?.player_transparency ?? 0.9
+  };
 });
 
 export const adminSetFeatureConfig = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(z.object({ itunesEnabled: z.boolean(), radioEnabled: z.boolean() }))
+  .inputValidator(z.object({ itunesEnabled: z.boolean(), radioEnabled: z.boolean(), playerTransparency: z.number().optional() }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     await setFirestoreDoc(
@@ -249,6 +254,7 @@ export const adminSetFeatureConfig = createServerFn({ method: "POST" })
       {
         itunes_enabled: data.itunesEnabled,
         radio_enabled: data.radioEnabled,
+        player_transparency: data.playerTransparency ?? 0.9,
         updated_at: nowIso(),
       },
       context.firebaseToken,

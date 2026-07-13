@@ -1,11 +1,11 @@
 import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Volume2, Maximize2, ListMusic, Plus, Heart, Minimize2, Wifi, Moon, Clock, Settings, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { usePlayer } from "@/lib/player-store";
 import { FullScreenPlayer } from "./FullScreenPlayer";
 import { LyricsTicker } from "./LyricsTicker";
-import { recordSongView } from "@/lib/api/social.functions";
+import { recordSongView, getFeatureConfig } from "@/lib/api/social.functions";
 import { MusicClock } from "./MusicClock";
 import { useSession } from "@/lib/auth";
 import { recordListeningTaste } from "@/lib/listening-taste";
@@ -50,6 +50,10 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
   const qc = useQueryClient();
   const { isLiked, toggleLike } = useLocalLibrary();
   const recordView = useServerFn(recordSongView);
+  const { data: featureConfig } = useQuery({ queryKey: ["feature-config"], queryFn: () => getFeatureConfig() });
+  const adminTransparency = featureConfig?.playerTransparency ?? 0.9;
+  const userTransparency = parseFloat(localStorage.getItem("sonexa.playerTransparency") || "0.9");
+  const playerTransparency = userTransparency;
   const [full, setFull] = useState(false);
   const [mini, setMini] = useState(false);
   const [showMiniPlayer, setShowMiniPlayer] = useState(false);
@@ -232,7 +236,11 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
                  shadow-glow
                  ring-1 ring-white/10
                  overflow-hidden ${isPlaying ? "animate-player-breathe" : ""}`}
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
+        style={{ 
+          paddingBottom: "env(safe-area-inset-bottom, 0px)",
+          backgroundColor: `rgba(255, 255, 255, ${playerTransparency * 0.1})`,
+          backdropFilter: `blur(${playerTransparency * 20}px)`
+        }}
       >
         {/* progress bar across the top edge */}
         <div className="absolute left-0 right-0 top-0 h-0.5 bg-border">

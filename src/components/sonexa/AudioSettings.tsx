@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Settings, Music, Volume2, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Settings, Music, Volume2, Zap, Eye } from "lucide-react";
 import { usePlayer } from "@/lib/player-store";
 import { toast } from "sonner";
 
@@ -13,12 +13,21 @@ export function AudioSettings({ onClose }: AudioSettingsProps) {
   const [crossfade, setCrossfade] = useState(0);
   const [normalizeAudio, setNormalizeAudio] = useState(true);
   const [gaplessPlayback, setGaplessPlayback] = useState(true);
+  const [playerTransparency, setPlayerTransparency] = useState(0.9);
+
+  useEffect(() => {
+    const savedTransparency = localStorage.getItem("sonexa.playerTransparency");
+    if (savedTransparency) {
+      setPlayerTransparency(parseFloat(savedTransparency));
+    }
+  }, []);
 
   const handleSave = () => {
     localStorage.setItem("sonexa.audioQuality", audioQuality);
     localStorage.setItem("sonexa.crossfade", String(crossfade));
     localStorage.setItem("sonexa.normalizeAudio", String(normalizeAudio));
     localStorage.setItem("sonexa.gaplessPlayback", String(gaplessPlayback));
+    localStorage.setItem("sonexa.playerTransparency", String(playerTransparency));
     toast.success("Audio settings saved");
     onClose?.();
   };
@@ -124,6 +133,27 @@ export function AudioSettings({ onClose }: AudioSettingsProps) {
             }`}
           />
         </button>
+      </div>
+
+      {/* Player Transparency */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Eye className="h-4 w-4 text-muted-foreground" />
+          <label className="font-medium">Player Transparency</label>
+          <span className="text-xs text-muted-foreground ml-auto">{(playerTransparency * 100).toFixed(0)}%</span>
+        </div>
+        <input
+          type="range"
+          min="0.3"
+          max="1"
+          step="0.05"
+          value={playerTransparency}
+          onChange={(e) => setPlayerTransparency(parseFloat(e.target.value))}
+          className="w-full accent-[var(--color-primary)] h-2"
+        />
+        <p className="text-xs text-muted-foreground">
+          Adjust the transparency of the player bar
+        </p>
       </div>
 
       <button

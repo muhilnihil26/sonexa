@@ -425,10 +425,11 @@ function FeatureConfigManager() {
   const { data } = useQuery({ queryKey: ["feature-config"], queryFn: () => getFeatures() });
   const itunesEnabled = data?.itunesEnabled === true;
   const radioEnabled = data?.radioEnabled === true;
+  const playerTransparency = data?.playerTransparency ?? 0.9;
 
   async function toggleItunes() {
     try {
-      await setFeatures({ data: { itunesEnabled: !itunesEnabled, radioEnabled } });
+      await setFeatures({ data: { itunesEnabled: !itunesEnabled, radioEnabled, playerTransparency } });
       toast.success(!itunesEnabled ? "iTunes/BGM enabled" : "iTunes/BGM turned off");
       qc.invalidateQueries({ queryKey: ["feature-config"] });
     } catch (error) {
@@ -438,8 +439,18 @@ function FeatureConfigManager() {
 
   async function toggleRadio() {
     try {
-      await setFeatures({ data: { itunesEnabled, radioEnabled: !radioEnabled } });
+      await setFeatures({ data: { itunesEnabled, radioEnabled: !radioEnabled, playerTransparency } });
       toast.success(!radioEnabled ? "Sonexa Radio enabled" : "Sonexa Radio disabled");
+      qc.invalidateQueries({ queryKey: ["feature-config"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not save setting");
+    }
+  }
+
+  async function updatePlayerTransparency(value: number) {
+    try {
+      await setFeatures({ data: { itunesEnabled, radioEnabled, playerTransparency: value } });
+      toast.success("Player transparency updated");
       qc.invalidateQueries({ queryKey: ["feature-config"] });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Could not save setting");
@@ -487,6 +498,25 @@ function FeatureConfigManager() {
           )}
           {radioEnabled ? "On" : "Off"}
         </button>
+      </div>
+
+      <div className="pt-5 border-t border-border/50">
+        <div className="text-sm font-semibold mb-2">Player Transparency</div>
+        <p className="mt-1 text-xs text-muted-foreground mb-3">
+          Control the transparency of the player bar. Lower values make it more transparent.
+        </p>
+        <div className="flex items-center gap-3">
+          <input
+            type="range"
+            min="0.3"
+            max="1"
+            step="0.05"
+            value={playerTransparency}
+            onChange={(e) => updatePlayerTransparency(parseFloat(e.target.value))}
+            className="flex-1 accent-primary"
+          />
+          <span className="text-sm font-mono w-12 text-right">{(playerTransparency * 100).toFixed(0)}%</span>
+        </div>
       </div>
     </div>
   );

@@ -180,7 +180,18 @@ function RootComponent() {
         <div className="min-h-screen animate-fade-up smooth-scroll">
           <Outlet />
         </div>
-        <Toaster theme="dark" position="top-center" />
+        <Toaster 
+          theme="dark" 
+          position="top-center"
+          toastOptions={{
+            className: "glass-card-hover border border-border/50",
+            style: {
+              background: "rgba(255, 255, 255, 0.05)",
+              backdropFilter: "blur(12px)",
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+            },
+          }}
+        />
       </PlayerProvider>
     </QueryClientProvider>
   );
