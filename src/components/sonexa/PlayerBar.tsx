@@ -1,4 +1,4 @@
-import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Volume2, Maximize2, ListMusic, Plus, Heart, Minimize2, Wifi, Moon, Clock } from "lucide-react";
+import { Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Volume2, Maximize2, ListMusic, Plus, Heart, Minimize2, Wifi, Moon, Clock, Settings, FolderOpen } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,6 +14,9 @@ import { MiniPlayer } from "./MiniPlayer";
 import { notifyDataSavingMode, requestNotificationPermission } from "@/lib/notifications";
 import { MusicVisualizer } from "./MusicVisualizer";
 import { QueueManager } from "./QueueManager";
+import { VolumeControl } from "./VolumeControl";
+import { AudioSettings } from "./AudioSettings";
+import { PlaylistManager } from "./PlaylistManager";
 import { toast } from "sonner";
 
 function fmt(s: number) {
@@ -58,6 +61,8 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
   const [sleepTimerActive, setSleepTimerActive] = useState(false);
   const [sleepTimerRemaining, setSleepTimerRemaining] = useState(0);
   const [showQueue, setShowQueue] = useState(false);
+  const [showAudioSettings, setShowAudioSettings] = useState(false);
+  const [showPlaylistManager, setShowPlaylistManager] = useState(false);
 
   // Load data saving mode from localStorage
   useEffect(() => {
@@ -442,19 +447,7 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
                 </div>
               )}
             </div>
-            <Volume2 className="h-4 w-4 text-muted-foreground" />
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={0.01}
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-              className="w-20 accent-[var(--color-primary)] h-1"
-            />
-            <span className="w-9 text-[10px] text-muted-foreground">
-              {Math.round(volume * 100)}%
-            </span>
+            <VolumeControl volume={volume} onVolumeChange={setVolume} />
             <button
               onClick={() => {
                 setMini(true);
@@ -482,6 +475,20 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
               title="Full screen"
             >
               <Maximize2 className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setShowAudioSettings(!showAudioSettings)}
+              className="text-muted-foreground hover:text-foreground transition"
+              title="Audio settings"
+            >
+              <Settings className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setShowPlaylistManager(!showPlaylistManager)}
+              className="text-muted-foreground hover:text-foreground transition"
+              title="Playlists"
+            >
+              <FolderOpen className="h-4 w-4" />
             </button>
           </div>
 
@@ -528,6 +535,20 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-up">
           <div className="w-full max-w-md h-[600px] rounded-2xl border border-border bg-card shadow-glow overflow-hidden">
             <QueueManager onClose={() => setShowQueue(false)} />
+          </div>
+        </div>
+      )}
+      {showAudioSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-up">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-glow overflow-hidden">
+            <AudioSettings onClose={() => setShowAudioSettings(false)} />
+          </div>
+        </div>
+      )}
+      {showPlaylistManager && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fade-up">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card shadow-glow overflow-hidden">
+            <PlaylistManager onClose={() => setShowPlaylistManager(false)} />
           </div>
         </div>
       )}

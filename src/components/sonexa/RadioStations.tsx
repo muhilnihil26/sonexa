@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { notifySuccess, notifyError } from "@/lib/notifications";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { listRadioStations } from "@/lib/api/youtube.functions";
+import { listRadioStations, listAdminYouTubeTracks } from "@/lib/api/youtube.functions";
 
 interface Station {
   id: string;
@@ -94,9 +94,10 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 
 export function RadioStations() {
   const p = usePlayer();
-  const { current, startRadio } = p;
+  const { current, startRadio, queue } = p;
   const { user } = useSession();
   const listStations = useServerFn(listRadioStations);
+  const listTracks = useServerFn(listAdminYouTubeTracks);
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
 
   const { data: firestoreStations, isLoading } = useQuery({
@@ -104,8 +105,15 @@ export function RadioStations() {
     queryFn: () => listStations(),
   });
 
+  const { data: tracksData } = useQuery({
+    queryKey: ["all-tracks"],
+    queryFn: () => listTracks(),
+    enabled: !!user,
+  });
+
   const customStations = (firestoreStations?.stations ?? []) as Station[];
   const allStations = [...PREDEFINED_STATIONS, ...customStations];
+  const allTracks = tracksData?.tracks || [];
 
   const playStation = async (station: Station) => {
     if (!user) {
@@ -143,9 +151,30 @@ export function RadioStations() {
           throw new Error("Could not fetch video data");
         }
       } else {
-        // For predefined stations, use current track as seed or fetch trending
-        const mockCatalog = current ? [current] : [];
-        await startRadio(mockCatalog, user.email || user.id || "default");
+        // For predefined stations, use all available tracks as seed
+        const seedTracks = allTracks.length > 0 ? allTracks.map((t: any) => ({
+          id: t.id,
+          title: t.title,
+          artist: t.artist || t.channel || "Unknown",
+          cover: t.thumbnail || t.cover || "",
+          audio: t.audio || "",
+          kind: t.kind || "audio",
+          youtube_video_id: t.youtube_video_id,
+          duration: t.duration,
+        })) : (current ? [current] : []);
+        
+        if (seedTracks.length === 0) {
+          toast.error("No tracks available to start radio");
+          setSelectedStation(null);
+          return;
+        }
+        
+        // Shuffle the tracks for variety
+        const shuffled = [...seedTracks].sort(() => Math.random() - 0.5);
+        
+        // Play first track and start radio with shuffled list
+        p.play(shuffled[0], shuffled);
+        await startRadio(shuffled, user.email || user.id || "default");
         notifySuccess(`Playing ${station.name}`);
       }
     } catch (error) {

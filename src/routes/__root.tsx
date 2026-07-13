@@ -13,6 +13,9 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { PlayerProvider } from "../lib/player-store";
 import { Toaster } from "../components/ui/sonner";
+import { KeyboardShortcuts } from "../components/sonexa/KeyboardShortcuts";
+import { IntroAnimation } from "../components/sonexa/IntroAnimation";
+import { useState, useEffect } from "react";
 
 function NotFoundComponent() {
   return (
@@ -145,6 +148,7 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
+  const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
     document.getElementById("sonexa-native-boot")?.remove();
@@ -172,6 +176,8 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <PlayerProvider>
         <TvRemoteFocus />
+        {showIntro && <IntroAnimation onComplete={() => setShowIntro(false)} />}
+        <KeyboardShortcuts />
         <div className="min-h-screen animate-fade-up">
           <Outlet />
         </div>

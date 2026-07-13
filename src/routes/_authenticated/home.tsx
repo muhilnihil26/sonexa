@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MusicClock } from "@/components/sonexa/MusicClock";
 import { AndroidDownloadChooser } from "@/components/sonexa/AndroidDownloadChooser";
 import { RadioStations } from "@/components/sonexa/RadioStations";
+import { SongRecommendations } from "@/components/sonexa/SongRecommendations";
 import { useSession } from "@/lib/auth";
 import { useLanguagePrefs } from "@/lib/language-prefs";
 import { isYtBroken, usePlayer, type Track } from "@/lib/player-store";
@@ -163,7 +164,7 @@ function Home() {
         )}
       </div>
 
-      <div className="relative overflow-hidden rounded-3xl border border-border bg-card/55 p-6 shadow-card animate-fade-up sm:p-8 md:p-10 hover:shadow-glow transition-shadow duration-500">
+      <div className="relative overflow-hidden rounded-3xl border border-border bg-card/55 p-4 shadow-card animate-fade-up sm:p-6 md:p-8 lg:p-10 hover:shadow-glow transition-shadow duration-500">
         <div 
           className="absolute inset-0 bg-cover bg-center mix-blend-overlay" 
           style={{ 
@@ -173,20 +174,20 @@ function Home() {
         />
         <div className="absolute inset-0 bg-gradient-to-r from-background via-background/90 to-background/20" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_80%_0%,oklch(0.7_0.24_350/.18),transparent_32%),radial-gradient(circle_at_0%_100%,oklch(0.78_0.18_60/.12),transparent_30%)]" />
-        <div className="relative grid gap-6 lg:grid-cols-[1fr_300px] lg:items-center">
+        <div className="relative grid gap-4 sm:gap-6 lg:grid-cols-[1fr_300px] lg:items-center">
           <div>
-            <p className="text-sm text-muted-foreground animate-fade-up" style={{ animationDelay: '0.1s' }}>{greet},</p>
-            <h1 className="mt-1 text-3xl font-black tracking-tight capitalize sm:text-4xl md:text-5xl animate-3d-text">
+            <p className="text-xs sm:text-sm text-muted-foreground animate-fade-up" style={{ animationDelay: '0.1s' }}>{greet},</p>
+            <h1 className="mt-1 text-2xl font-black tracking-tight capitalize sm:text-3xl md:text-4xl lg:text-5xl animate-3d-text">
               {name}
             </h1>
-            <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base animate-fade-up" style={{ animationDelay: '0.2s' }}>
+            <p className="mt-2 max-w-xl text-xs text-muted-foreground sm:text-sm md:text-base animate-fade-up" style={{ animationDelay: '0.2s' }}>
               Premium Spotify-style streaming interface, customized for your vibe.
             </p>
             {!isNativeApp && (
-              <div className="mt-6 flex flex-wrap gap-3 animate-fade-up" style={{ animationDelay: '0.3s' }}>
+              <div className="mt-4 sm:mt-6 flex flex-wrap gap-2 sm:gap-3 animate-fade-up" style={{ animationDelay: '0.3s' }}>
                 <AndroidDownloadChooser
                   label="Android App"
-                  className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-5 py-2.5 text-sm font-semibold text-background shadow-glow transition hover:scale-[1.02] hover:shadow-glow lg:hidden"
+                  className="inline-flex items-center gap-2 rounded-full bg-brand-gradient px-4 py-2 text-xs font-semibold text-background shadow-glow transition hover:scale-[1.02] hover:shadow-glow sm:px-5 sm:py-2.5 sm:text-sm lg:hidden"
                 />
                 <div className="hidden lg:flex gap-3">
                   <a
@@ -205,14 +206,14 @@ function Home() {
               </div>
             )}
           </div>
-          <div className="flex flex-col gap-4 animate-fade-up" style={{ animationDelay: '0.4s' }}>
+          <div className="flex flex-col gap-3 sm:gap-4 animate-fade-up" style={{ animationDelay: '0.4s' }}>
             <MusicClock />
             {featureConfig?.radioEnabled && (
               <button 
                 onClick={() => startRadio(catalog.allTracks, user?.email ?? user?.id ?? "")}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-primary text-background font-bold shadow-glow hover:scale-[1.02] hover:shadow-glow transition animate-pulse-glow"
+                className="w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 rounded-2xl bg-primary text-background font-bold shadow-glow hover:scale-[1.02] hover:shadow-glow transition animate-pulse-glow text-sm sm:text-base"
               >
-                <Radio className="h-5 w-5" /> Start Sonexa Radio
+                <Radio className="h-4 w-4 sm:h-5 sm:w-5" /> Start Sonexa Radio
               </button>
             )}
           </div>
@@ -220,26 +221,26 @@ function Home() {
       </div>
 
       <section className="animate-fade-up [animation-delay:80ms] [animation-fill-mode:both]">
-        <div className="flex items-end justify-between gap-4 mb-4">
+        <div className="flex items-end justify-between gap-2 sm:gap-4 mb-3 sm:mb-4">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Today on Sonexa</p>
-            <h2 className="mt-1 text-xl font-bold tracking-tight sm:text-2xl">Quick taps, fresh mixes, one-thumb friendly.</h2>
+            <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">Today on Sonexa</p>
+            <h2 className="mt-1 text-lg font-bold tracking-tight sm:text-xl md:text-2xl">Quick taps, fresh mixes, one-thumb friendly.</h2>
           </div>
           <Link to="/browse" className="hidden sm:inline-flex items-center gap-1 text-sm font-semibold text-primary hover:underline">
             Explore <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-2 sm:gap-3 md:grid-cols-2 xl:grid-cols-4">
           <button
             onClick={() => {
               if (spotlightPlaylist?.tracks?.length) {
                 play(spotlightPlaylist.tracks[0], spotlightPlaylist.tracks);
               }
             }}
-            className="touch-card group relative overflow-hidden rounded-3xl border border-border/60 bg-[linear-gradient(135deg,oklch(0.2_0_0),oklch(0.14_0_0))] p-5 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 active:scale-[0.99]"
+            className="touch-card group relative overflow-hidden rounded-2xl sm:rounded-3xl border border-border/60 bg-[linear-gradient(135deg,oklch(0.2_0_0),oklch(0.14_0_0))] p-3 sm:p-5 text-left shadow-card transition duration-300 hover:-translate-y-1 hover:border-primary/40 active:scale-[0.99]"
           >
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,oklch(0.68_0.18_150/.18),transparent_35%),radial-gradient(circle_at_bottom_left,oklch(0.78_0.18_60/.12),transparent_32%)]" />
-            <div className="relative flex h-full min-h-40 flex-col justify-between">
+            <div className="relative flex h-full min-h-32 sm:min-h-40 flex-col justify-between">
               <div className="flex items-center justify-between">
                 <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/15 text-primary">
                   <Shuffle className="h-5 w-5" />
@@ -402,6 +403,7 @@ function Home() {
             {(catalog as any).topArtists.slice(0, 6).map((artist: string, idx: number) => {
               const artistTracks = catalog.allTracks.filter((t: Track) => t.artist === artist);
               const artistCover = artistTracks.length > 0 ? artistTracks[0].cover : null;
+              const artistId = artistTracks.length > 0 ? artistTracks[0].artistId : null;
               
               return (
                 <button
@@ -412,23 +414,27 @@ function Home() {
                   className="group relative aspect-square bg-card/40 hover:bg-card/80 border border-border/30 rounded-full overflow-hidden transition duration-300 hover:shadow-glow hover:scale-105"
                 >
                   {artistCover ? (
-                    <img
-                      src={artistCover}
-                      alt={artist}
-                      className="absolute inset-0 w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={artistCover}
+                        alt={artist}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                    </>
                   ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/20 to-purple-500/20">
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/30 to-purple-500/30">
                       <div className="text-center">
-                        <div className="text-3xl font-bold text-white">{artist.charAt(0)}</div>
+                        <div className="text-4xl font-bold text-white">{artist.charAt(0)}</div>
                       </div>
                     </div>
                   )}
-                  <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-                    <div className="text-xs font-bold text-white truncate">{artist}</div>
+                  <div className="absolute bottom-0 left-0 right-0 p-3">
+                    <div className="text-xs font-bold text-white truncate text-center">{artist}</div>
+                    <div className="text-[10px] text-white/80 text-center">{artistTracks.length} songs</div>
                   </div>
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/20 flex items-center justify-center">
-                    <PlayCircle className="h-8 w-8 text-white drop-shadow-md" />
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity bg-black/30 flex items-center justify-center">
+                    <PlayCircle className="h-10 w-10 text-white drop-shadow-md" />
                   </div>
                 </button>
               );

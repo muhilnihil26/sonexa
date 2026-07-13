@@ -145,6 +145,94 @@ async function fetchFromGenius(title: string, artist: string): Promise<LyricsRes
   }
 }
 
+async function fetchFromChartLyrics(title: string, artist: string): Promise<LyricsResult | null> {
+  try {
+    // ChartLyrics API - free lyrics source
+    const query = encodeURIComponent(`${title} ${artist}`);
+    const url = `https://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect?artist=${encodeURIComponent(artist)}&song=${encodeURIComponent(title)}`;
+    
+    const res = await fetch(url, { 
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!res.ok) return null;
+    
+    const text = await res.text();
+    
+    // Parse XML response
+    if (text && text.includes("<Lyric>") && !text.includes("<Lyric />")) {
+      const match = text.match(/<Lyric>(.*?)<\/Lyric>/s);
+      if (match && match[1].trim()) {
+        const plain = match[1].trim();
+        if (plain && !plain.toLowerCase().includes("lyrics not found")) {
+          return { status: "found", synced: null, plain };
+        }
+      }
+    }
+    return null;
+  } catch (e) {
+    console.error("chartlyrics error:", e);
+    return null;
+  }
+}
+
+async function fetchFromLyricsify(title: string, artist: string): Promise<LyricsResult | null> {
+  try {
+    // Lyricsify API - another free source
+    const query = encodeURIComponent(`${title} ${artist}`);
+    const url = `https://lyricsify.com/api/search?q=${query}`;
+    
+    const res = await fetch(url, { 
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json() as { lyrics?: string };
+    
+    if (data.lyrics && data.lyrics.trim() && !data.lyrics.toLowerCase().includes("lyrics not found")) {
+      return { status: "found", synced: null, plain: data.lyrics };
+    }
+    return null;
+  } catch (e) {
+    console.error("lyricsify error:", e);
+    return null;
+  }
+}
+
+async function fetchFromVagalume(title: string, artist: string): Promise<LyricsResult | null> {
+  try {
+    // Vagalume API - Brazilian lyrics service
+    const query = encodeURIComponent(`${title} ${artist}`);
+    const url = `https://api.vagalume.com.br/search.php?art=${encodeURIComponent(artist)}&mus=${encodeURIComponent(title)}&apikey=660a4395aee69fd836a644f058b9b18f`;
+    
+    const res = await fetch(url, { 
+      signal: AbortSignal.timeout(5000),
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
+    });
+    
+    if (!res.ok) return null;
+    
+    const data = await res.json() as { mus?: { 0?: { text?: string } } };
+    
+    if (data.mus?.[0]?.text && data.mus[0].text.trim()) {
+      return { status: "found", synced: null, plain: data.mus[0].text };
+    }
+    return null;
+  } catch (e) {
+    console.error("vagalume error:", e);
+    return null;
+  }
+}
+
 export async function fetchLyrics(title: string, artist: string): Promise<LyricsResult> {
   if (!title || !artist) {
     return { status: "error", message: "Missing title or artist" };
@@ -170,9 +258,24 @@ export async function fetchLyrics(title: string, artist: string): Promise<Lyrics
       result = await fetchFromSearch(title, artist);
     }
     
-    // Try lyrics.ovh as final fallback
+    // Try lyrics.ovh as fallback
     if (!result) {
       result = await fetchFromGenius(title, artist);
+    }
+    
+    // Try ChartLyrics
+    if (!result) {
+      result = await fetchFromChartLyrics(title, artist);
+    }
+    
+    // Try Lyricsify
+    if (!result) {
+      result = await fetchFromLyricsify(title, artist);
+    }
+    
+    // Try Vagalume
+    if (!result) {
+      result = await fetchFromVagalume(title, artist);
     }
     
     // If nothing found
