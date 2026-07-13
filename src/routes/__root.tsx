@@ -7,7 +7,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -15,7 +15,6 @@ import { PlayerProvider } from "../lib/player-store";
 import { Toaster } from "../components/ui/sonner";
 import { KeyboardShortcuts } from "../components/sonexa/KeyboardShortcuts";
 import { IntroAnimation } from "../components/sonexa/IntroAnimation";
-import { useState, useEffect } from "react";
 
 function NotFoundComponent() {
   return (
@@ -178,7 +177,7 @@ function RootComponent() {
         <TvRemoteFocus />
         {showIntro && <IntroAnimation onComplete={() => setShowIntro(false)} />}
         <KeyboardShortcuts />
-        <div className="min-h-screen animate-fade-up">
+        <div className="min-h-screen animate-fade-up smooth-scroll">
           <Outlet />
         </div>
         <Toaster theme="dark" position="top-center" />

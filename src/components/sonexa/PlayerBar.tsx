@@ -228,7 +228,7 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
                  bottom-20 md:bottom-5
                  w-[calc(100%-1.25rem)] md:w-[min(880px,calc(100%-2rem))]
                  rounded-2xl border border-border/50
-                 bg-card/90 backdrop-blur-2xl
+                 glass-card-hover
                  shadow-glow
                  ring-1 ring-white/10
                  overflow-hidden ${isPlaying ? "animate-player-breathe" : ""}`}
@@ -290,19 +290,19 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
             <div className="flex items-center gap-3 md:gap-4">
               <button
                 onClick={toggleShuffle}
-                className={`transition-all duration-200 hover:scale-110 ${shuffle ? "text-primary" : "text-white/70 hover:text-white"}`}
+                className={`transition-all duration-200 hover:scale-110 ripple ${shuffle ? "text-primary" : "text-white/70 hover:text-white"}`}
               >
                 <Shuffle className="h-4 w-4" />
               </button>
               <button
                 onClick={prev}
-                className="text-white/70 hover:text-white transition-all duration-200 hover:scale-110 hover:text-white"
+                className="text-white/70 hover:text-white transition-all duration-200 hover:scale-110 ripple hover:text-white"
               >
                 <SkipBack className="h-5 w-5" />
               </button>
               <button
                 onClick={toggle}
-                className={`h-10 w-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-all duration-200 shadow-glow ${isPlaying ? "animate-play-pulse" : ""}`}
+                className={`h-10 w-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-110 transition-all duration-200 shadow-glow ripple ${isPlaying ? "animate-play-pulse" : ""}`}
               >
                 {isPlaying ? (
                   <Pause className="h-4 w-4 fill-black text-black" />
@@ -312,13 +312,13 @@ export function PlayerBar({ onMiniPlayer }: { onMiniPlayer?: () => void }) {
               </button>
               <button
                 onClick={next}
-                className="text-white/70 hover:text-white transition-all duration-200 hover:scale-110 hover:text-white"
+                className="text-white/70 hover:text-white transition-all duration-200 hover:scale-110 ripple hover:text-white"
               >
                 <SkipForward className="h-5 w-5" />
               </button>
               <button
                 onClick={toggleRepeat}
-                className={`transition hover:scale-110 ${repeat ? "text-primary" : "text-white/70 hover:text-white"}`}
+                className={`transition hover:scale-110 ripple ${repeat ? "text-primary" : "text-white/70 hover:text-white"}`}
               >
                 <Repeat className="h-4 w-4" />
               </button>
