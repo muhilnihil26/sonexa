@@ -90,8 +90,8 @@ function isYouTubeBackupDue(createdAt?: string | null) {
 }
 
 function Admin() {
-  const { user } = useSession();
-  const isAdmin = useIsAdmin(user?.id);
+  const { user, loading } = useSession();
+  const isAdmin = useIsAdmin(user?.email);
   const createUploadUrls = useServerFn(adminCreateUploadUrls);
   const createSongFromUpload = useServerFn(adminCreateSongFromUpload);
   const listAdmin = useServerFn(adminListSongs);
@@ -103,6 +103,18 @@ function Admin() {
   const [audio, setAudio] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+
+  if (loading) {
+    return (
+      <div className="p-10 max-w-xl">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 w-8 bg-primary/20 rounded" />
+          <div className="h-8 w-48 bg-muted rounded" />
+          <div className="h-4 w-64 bg-muted rounded" />
+        </div>
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (
