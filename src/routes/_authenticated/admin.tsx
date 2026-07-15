@@ -260,8 +260,6 @@ function Admin() {
       <RadioStationManager />
       <DownloadScheduler />
       <DiscoveryScheduler />
-      <DownloadManager />
-      <AIDiscoveryManager />
       <SamplePlaylistImporter />
       <FeatureConfigManager />
       <HomeConfigManager />
