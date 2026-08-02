@@ -20,8 +20,7 @@ import {
   Minimize2,
   Maximize2,
 } from "lucide-react";
-import { SocialShare } from "./SocialShare";
-import { ShortsExportButton, LyricsVideoExportButton } from "./VideoExport";
+import { NativeAudioControls } from "./NativeAudioControls";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -442,6 +441,10 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
                     <Heart className="h-3.5 w-3.5" /> {social?.stats.likeCount ?? 0}
                   </button>
                   <SocialShare track={p.current} videoUrl={isYouTube ? `https://www.youtube.com/watch?v=${p.current.ytId}` : undefined} />
+                  {/* Audio Controls - Native equalizer */}
+                  <div className="mt-4 w-full max-w-sm mx-auto">
+                    <NativeAudioControls audioElement={audioRef.current} />
+                  </div>
                 </div>
               </>
             )}

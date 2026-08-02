@@ -15,6 +15,7 @@ import { PlayerProvider } from "../lib/player-store";
 import { Toaster } from "../components/ui/sonner";
 import { KeyboardShortcuts } from "../components/sonexa/KeyboardShortcuts";
 import { IntroAnimation } from "../components/sonexa/IntroAnimation";
+import { PersistentMiniPlayer } from "../components/sonexa/PersistentMiniPlayer";
 
 function NotFoundComponent() {
   return (
@@ -153,6 +154,15 @@ function RootComponent() {
     document.getElementById("sonexa-native-boot")?.remove();
   }, []);
 
+  // Register Service Worker for background playback
+  useEffect(() => {
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw-handler.js").catch((err) => {
+        console.log("Service Worker registration failed:", err);
+      });
+    }
+  }, []);
+
   // Add page transition animations
   useEffect(() => {
     const handleRouteChange = () => {
@@ -177,6 +187,7 @@ function RootComponent() {
         <TvRemoteFocus />
         {showIntro && <IntroAnimation onComplete={() => setShowIntro(false)} />}
         <KeyboardShortcuts />
+        <PersistentMiniPlayer />
         <div className="min-h-screen animate-fade-up smooth-scroll">
           <Outlet />
         </div>
