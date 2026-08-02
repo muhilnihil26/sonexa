@@ -7,10 +7,6 @@
     {
       "path": "/api/sonexa/daily-sync",
       "schedule": "0 3 * * *"
-    },
-    {
-      "path": "/api/sonexa/scheduled-download",
-      "schedule": "0 12 * * *"
     }
   ]
 }

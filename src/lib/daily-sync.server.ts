@@ -12,7 +12,6 @@ type DailySyncResult = {
   playlistsDiscovered: number;
   playlistsAdded: number;
   playlistsUpdated: number;
-  backupsQueued: number;
   queriesRun: string[];
   playlistSources: string[];
 };
@@ -113,40 +112,12 @@ async function upsertPlaylist(
   return snapshot.exists ? "updated" : "added";
 }
 
-async function queueBackupJob(track: YouTubeTrackRow) {
-  const backendUrl = (process.env.DOWNLOAD_SERVICE_URL ?? "").trim();
-  if (!backendUrl) return false;
-
-  const queueResponse = await fetch(`${backendUrl.replace(/\/$/, "")}/queue`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({
-      videoId: track.video_id,
-      title: track.title,
-      channel: track.channel,
-    }),
-  });
-  if (!queueResponse.ok) return false;
-
-  const queued = (await queueResponse.json()) as { jobId?: string };
-  if (!queued.jobId) return false;
-
-  const processResponse = await fetch(`${backendUrl.replace(/\/$/, "")}/process`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ jobId: queued.jobId }),
-  });
-
-  return processResponse.ok;
-}
-
 export async function runDailyYouTubeSync(): Promise<DailySyncResult> {
   const db = getAdminDb();
   const language = (process.env.DAILY_YOUTUBE_LANGUAGE ?? "tamil").trim() || "tamil";
   const queryCount = parseIntegerEnv("DAILY_QUERY_COUNT", 4);
   const discoveryLimit = parseIntegerEnv("DAILY_DISCOVERY_LIMIT", 8);
   const playlistLimit = parseIntegerEnv("DAILY_PLAYLIST_LIMIT", 40);
-  const backupLimit = parseIntegerEnv("DAILY_BACKUP_LIMIT", 12);
 
   const queriesRun =
     csvEnv("DAILY_YOUTUBE_QUERIES").slice(0, queryCount).length > 0
@@ -160,7 +131,6 @@ export async function runDailyYouTubeSync(): Promise<DailySyncResult> {
   let playlistsDiscovered = 0;
   let playlistsAdded = 0;
   let playlistsUpdated = 0;
-  let backupsQueued = 0;
 
   for (const query of queriesRun) {
     const tracks = await searchYouTubeVideos(query, discoveryLimit);
@@ -186,18 +156,6 @@ export async function runDailyYouTubeSync(): Promise<DailySyncResult> {
     }
   }
 
-  const allTracks = await db.collection("sonexa_youtube_tracks").get();
-  const missingBackups = allTracks.docs
-    .map((docSnap) => docSnap.data() as Partial<YouTubeTrackRow>)
-    .filter((track) => !track.backup_uploaded_at && !track.backup_url)
-    .slice(0, backupLimit);
-
-  for (const track of missingBackups) {
-    if (!track.video_id || !track.title || !track.channel) continue;
-    const queued = await queueBackupJob(track as YouTubeTrackRow);
-    if (queued) backupsQueued++;
-  }
-
   return {
     songsDiscovered,
     songsAdded,
@@ -205,7 +163,6 @@ export async function runDailyYouTubeSync(): Promise<DailySyncResult> {
     playlistsDiscovered,
     playlistsAdded,
     playlistsUpdated,
-    backupsQueued,
     queriesRun,
     playlistSources,
   };

@@ -34,6 +34,33 @@ export function YouTubePlaylistInput() {
     return match ? match[1] : null;
   }
 
+  // Fetch playlist items using YouTube Data API
+  async function fetchPlaylistItems(playlistId: string) {
+    try {
+      // Using noembed for basic playlist info (no API key needed)
+      const playlistUrl = `https://www.youtube.com/playlist?list=${playlistId}`;
+      const response = await fetch(`https://noembed.com/embed?url=${encodeURIComponent(playlistUrl)}`);
+      const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error || "Could not fetch playlist info");
+      }
+
+      // For now, return basic playlist info
+      // Note: noembed doesn't provide playlist items, so we'll need to inform user
+      // that full playlist support requires YouTube API key
+      return {
+        title: data.title || "YouTube Playlist",
+        author: data.author_name || "Unknown",
+        thumbnail: data.thumbnail_url || "",
+        itemCount: 0, // noembed doesn't provide this
+      };
+    } catch (error) {
+      console.error("Failed to fetch playlist info:", error);
+      throw error;
+    }
+  }
+
   async function fetchVideoInfo(videoId: string) {
     try {
       // Using noembed for basic video info (no API key needed)
@@ -97,9 +124,16 @@ export function YouTubePlaylistInput() {
         setUrl("");
         setIsOpen(false);
       } else if (playlistId) {
-        // Playlist - for now, just notify that playlist support is coming
-        toast.info("Playlist support coming soon! For now, add individual videos.");
-        // TODO: Implement playlist fetching using YouTube API
+        // Playlist - fetch playlist info and inform user about limitations
+        try {
+          const playlistInfo = await fetchPlaylistItems(playlistId);
+          toast.info(
+            `Found playlist: ${playlistInfo.title}. Full playlist support requires YouTube API key. For now, add individual videos.`,
+            { duration: 5000 }
+          );
+        } catch (error) {
+          toast.error("Could not fetch playlist. Please check the URL and try again.");
+        }
       }
     } catch (error) {
       console.error("Error adding YouTube video:", error);

@@ -5,7 +5,7 @@
 
 import { toast } from "sonner";
 
-export type NotificationType = "playback" | "download" | "error" | "success" | "info";
+export type NotificationType = "playback" | "download" | "error" | "success" | "info" | "warning";
 
 export interface NotificationOptions {
   title: string;
@@ -13,6 +13,10 @@ export interface NotificationOptions {
   icon?: string;
   type?: NotificationType;
   duration?: number;
+  action?: {
+    label: string;
+    onClick: () => void;
+  };
 }
 
 // Request notification permission
@@ -42,13 +46,22 @@ export function showNotification(options: NotificationOptions) {
     icon = "/logo-icon.png",
     type = "info",
     duration = 4000,
+    action,
   } = options;
 
   // Show in-app toast
-  const toastOptions = {
+  const toastOptions: any = {
     duration,
-    icon: type === "error" ? "❌" : type === "success" ? "✅" : type === "playback" ? "🎵" : "ℹ️",
+    icon: type === "error" ? "❌" : type === "success" ? "✅" : type === "playback" ? "🎵" : type === "warning" ? "⚠️" : "ℹ️",
   };
+
+  if (body) {
+    toastOptions.description = body;
+  }
+
+  if (action) {
+    toastOptions.action = action;
+  }
 
   switch (type) {
     case "error":
@@ -57,8 +70,11 @@ export function showNotification(options: NotificationOptions) {
     case "success":
       toast.success(title, toastOptions);
       break;
+    case "warning":
+      toast.warning(title, toastOptions);
+      break;
     case "playback":
-      toast(title, { ...toastOptions, description: body });
+      toast(title, toastOptions);
       break;
     default:
       toast.info(title, toastOptions);
@@ -127,13 +143,45 @@ export function notifyDownloadError(filename: string) {
 }
 
 // Error notifications
-export function notifyError(message: string) {
+export function notifyError(message: string, details?: string) {
+  console.error("[Sonexa Error]:", message, details);
   showNotification({
     type: "error",
     title: "Error",
-    body: message,
+    body: details ? `${message}: ${details}` : message,
     duration: 5000,
   });
+}
+
+export function notifyWarning(message: string, details?: string) {
+  console.warn("[Sonexa Warning]:", message, details);
+  showNotification({
+    type: "warning",
+    title: "Warning",
+    body: details ? `${message}: ${details}` : message,
+    duration: 4000,
+  });
+}
+
+export function notifyNetworkError(operation: string) {
+  notifyError(
+    "Network Error",
+    `Could not ${operation}. Please check your internet connection and try again.`
+  );
+}
+
+export function notifyAuthError(operation: string) {
+  notifyError(
+    "Authentication Error",
+    `Please sign in to ${operation}.`
+  );
+}
+
+export function notifyValidationError(field: string, message: string) {
+  notifyWarning(
+    "Invalid Input",
+    `${field}: ${message}`
+  );
 }
 
 // Success notifications

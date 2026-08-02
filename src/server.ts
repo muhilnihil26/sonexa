@@ -159,27 +159,6 @@ async function handleDailySyncApi(request: Request) {
   });
 }
 
-async function handleScheduledDownloadApi(request: Request) {
-  const cronHeader = request.headers.get("x-vercel-cron");
-  const secret = new URL(request.url).searchParams.get("secret") ?? request.headers.get("x-sonexa-cron-secret");
-  const expectedSecret = process.env.DAILY_SYNC_SECRET?.trim() ?? "";
-
-  if (cronHeader !== "1" && (!expectedSecret || secret !== expectedSecret)) {
-    return apiJson({ ok: false, error: "Unauthorized" }, { status: 401 });
-  }
-
-  if (request.method !== "GET") {
-    return apiJson({ ok: false, error: "Method not allowed" }, { status: 405 });
-  }
-
-  const { executeScheduledDownload } = await import("./lib/api/scheduler.functions");
-  const result = await executeScheduledDownload();
-  return apiJson({
-    ok: true,
-    ...result,
-  });
-}
-
 function withCors(request: Request, response: Response) {
   const headers = new Headers(response.headers);
   corsHeaders(request).forEach((value, key) => headers.set(key, value));
@@ -209,13 +188,6 @@ export default {
           return new Response(null, { status: 204, headers: apiCorsHeaders() });
         }
         return handleDailySyncApi(request);
-      }
-
-      if (url.pathname === "/api/sonexa/scheduled-download") {
-        if (request.method === "OPTIONS") {
-          return new Response(null, { status: 204, headers: apiCorsHeaders() });
-        }
-        return handleScheduledDownloadApi(request);
       }
 
       if (request.method === "OPTIONS") {

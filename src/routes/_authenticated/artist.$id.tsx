@@ -32,6 +32,14 @@ function ArtistPage() {
     audio: s.audio_url,
   }));
   const artistImage = data.artist.image_url || tracks.find((track) => track.cover)?.cover || "";
+  const relatedArtists: Array<{ id: string; image_url: string | null; name: string }> = [];
+  const concerts: Array<{
+    id: string;
+    venue: string;
+    city: string;
+    country: string;
+    date: string;
+  }> = [];
 
   return (
     <div className="animate-page-in">
@@ -105,11 +113,11 @@ function ArtistPage() {
           </section>
         )}
 
-        {/* Related Artists */}
+        {/* Related artists and concert data are not part of the current catalog response. */}
         <section>
           <h2 className="text-2xl font-bold mb-4">Related Artists</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-            {data.related_artists?.slice(0, 6).map((artist) => (
+            {relatedArtists.slice(0, 6).map((artist) => (
               <Link
                 key={artist.id}
                 to="/artist/$id"
@@ -124,18 +132,18 @@ function ArtistPage() {
                 <div className="font-semibold text-sm truncate text-center">{artist.name}</div>
               </Link>
             ))}
-            {(!data.related_artists || data.related_artists.length === 0) && (
+            {relatedArtists.length === 0 && (
               <p className="text-muted-foreground text-sm col-span-full">No related artists yet.</p>
             )}
           </div>
         </section>
 
         {/* Concert Info */}
-        {data.artist.concerts && data.artist.concerts.length > 0 && (
+        {concerts.length > 0 && (
           <section>
             <h2 className="text-2xl font-bold mb-4">Upcoming Concerts</h2>
             <div className="space-y-3">
-              {data.artist.concerts.map((concert) => (
+              {concerts.map((concert) => (
                 <div
                   key={concert.id}
                   className="p-4 rounded-xl bg-card/40 border border-border/30 hover:bg-card/60 transition"

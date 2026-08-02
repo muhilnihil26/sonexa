@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ListPlus, Music, Play, Search as SearchIcon, Send, Sparkles, Youtube } from "lucide-react";
+import { ListPlus, Music, Play, Search as SearchIcon, Send, Sparkles, Youtube, Filter, X } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { YouTubeRow } from "@/components/sonexa/YouTubeRow";
 import { searchYouTube, submitYouTubeRequest } from "@/lib/api/youtube.functions";
@@ -22,6 +22,11 @@ const TRENDING_SEARCHES = [
 
 type SearchFilter = "all" | "songs" | "artists" | "albums" | "playlists" | "youtube";
 
+type GenreFilter = "all" | "pop" | "folk" | "classical" | "filmi" | "devotional" | "hiphop" | "indie" | "rock";
+type MoodFilter = "all" | "energetic" | "romantic" | "melancholy" | "uplifting" | "calm";
+type LanguageFilter = "all" | "tamil" | "hindi" | "telugu" | "malayalam" | "kannada" | "english";
+type SortOption = "relevance" | "newest" | "oldest" | "popular";
+
 const FILTERS: Array<{ id: SearchFilter; label: string }> = [
   { id: "all", label: "All" },
   { id: "songs", label: "Songs" },
@@ -29,6 +34,44 @@ const FILTERS: Array<{ id: SearchFilter; label: string }> = [
   { id: "albums", label: "Albums" },
   { id: "playlists", label: "Playlists" },
   { id: "youtube", label: "YouTube" },
+];
+
+const GENRE_FILTERS: Array<{ id: GenreFilter; label: string }> = [
+  { id: "all", label: "All Genres" },
+  { id: "pop", label: "Pop" },
+  { id: "folk", label: "Folk" },
+  { id: "classical", label: "Classical" },
+  { id: "filmi", label: "Filmi" },
+  { id: "devotional", label: "Devotional" },
+  { id: "hiphop", label: "Hip-Hop" },
+  { id: "indie", label: "Indie" },
+  { id: "rock", label: "Rock" },
+];
+
+const MOOD_FILTERS: Array<{ id: MoodFilter; label: string }> = [
+  { id: "all", label: "All Moods" },
+  { id: "energetic", label: "Energetic" },
+  { id: "romantic", label: "Romantic" },
+  { id: "melancholy", label: "Melancholy" },
+  { id: "uplifting", label: "Uplifting" },
+  { id: "calm", label: "Calm" },
+];
+
+const LANGUAGE_FILTERS: Array<{ id: LanguageFilter; label: string }> = [
+  { id: "all", label: "All Languages" },
+  { id: "tamil", label: "Tamil" },
+  { id: "hindi", label: "Hindi" },
+  { id: "telugu", label: "Telugu" },
+  { id: "malayalam", label: "Malayalam" },
+  { id: "kannada", label: "Kannada" },
+  { id: "english", label: "English" },
+];
+
+const SORT_OPTIONS: Array<{ id: SortOption; label: string }> = [
+  { id: "relevance", label: "Relevance" },
+  { id: "newest", label: "Newest" },
+  { id: "oldest", label: "Oldest" },
+  { id: "popular", label: "Popular" },
 ];
 
 export const Route = createFileRoute("/_authenticated/search")({
@@ -43,6 +86,11 @@ function SearchPage() {
   const initialSearch = Route.useSearch();
   const [q, setQ] = useState(initialSearch.q);
   const [filter, setFilter] = useState<SearchFilter>("all");
+  const [genreFilter, setGenreFilter] = useState<GenreFilter>("all");
+  const [moodFilter, setMoodFilter] = useState<MoodFilter>("all");
+  const [languageFilter, setLanguageFilter] = useState<LanguageFilter>("all");
+  const [sortBy, setSortBy] = useState<SortOption>("relevance");
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
   const [ytUrl, setYtUrl] = useState("");
   const [ytLanguage, setYtLanguage] = useState("tamil");
   const [requesting, setRequesting] = useState(false);
@@ -131,14 +179,49 @@ function SearchPage() {
   }
 
   const hasQuery = q.trim().length >= 2;
-  const visibleResults = ytResults.filter((result) => {
-    if (filter === "all" || filter === "youtube") return true;
-    if (filter === "songs") return result.type === "video";
-    if (filter === "artists") return result.type === "channel";
-    if (filter === "albums") return result.type === "playlist";
-    if (filter === "playlists") return result.type === "playlist";
-    return true;
-  });
+  const visibleResults = useMemo(() => {
+    let filtered = ytResults.filter((result) => {
+      if (filter === "all" || filter === "youtube") return true;
+      if (filter === "songs") return result.type === "video";
+      if (filter === "artists") return result.type === "channel";
+      if (filter === "albums") return result.type === "playlist";
+      if (filter === "playlists") return result.type === "playlist";
+      return true;
+    });
+
+    // Apply advanced filters (simulated for YouTube results)
+    if (genreFilter !== "all") {
+      filtered = filtered.filter(result => 
+        result.title.toLowerCase().includes(genreFilter) || 
+        result.channel.toLowerCase().includes(genreFilter)
+      );
+    }
+
+    if (languageFilter !== "all") {
+      filtered = filtered.filter(result => 
+        result.title.toLowerCase().includes(languageFilter) || 
+        result.channel.toLowerCase().includes(languageFilter)
+      );
+    }
+
+    // Apply sorting
+    if (sortBy === "newest") {
+      filtered = [...filtered].reverse();
+    } else if (sortBy === "popular") {
+      filtered = [...filtered].sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    return filtered;
+  }, [ytResults, filter, genreFilter, languageFilter, sortBy]);
+
+  const hasActiveFilters = genreFilter !== "all" || moodFilter !== "all" || languageFilter !== "all" || sortBy !== "relevance";
+
+  const clearFilters = () => {
+    setGenreFilter("all");
+    setMoodFilter("all");
+    setLanguageFilter("all");
+    setSortBy("relevance");
+  };
   const noResults =
     hasQuery &&
     !busy &&
@@ -169,7 +252,7 @@ function SearchPage() {
             <span className="hidden sm:inline">Search</span>
           </div>
         </div>
-        <div className="mt-3 flex max-w-4xl flex-wrap gap-2 overflow-x-auto pb-1">
+        <div className="mt-3 flex max-w-4xl flex-wrap items-center gap-2 overflow-x-auto pb-1">
           {FILTERS.map((item) => (
             <button
               key={item.id}
@@ -183,6 +266,18 @@ function SearchPage() {
               {item.label}
             </button>
           ))}
+          <button
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`touch-card shrink-0 rounded-full border px-4 py-2 text-xs font-semibold transition flex items-center gap-1.5 ${
+              showAdvancedFilters || hasActiveFilters
+                ? "border-primary bg-primary/15 text-primary"
+                : "border-border bg-card/60 text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <Filter className="h-3.5 w-3.5" />
+            Filters
+            {hasActiveFilters && <span className="h-1.5 w-1.5 rounded-full bg-primary" />}
+          </button>
         </div>
         {showSuggestions && (
           <div className="mt-3 flex max-w-4xl flex-wrap gap-2 overflow-x-auto pb-1">
@@ -199,6 +294,105 @@ function SearchPage() {
                 {suggestion}
               </button>
             ))}
+          </div>
+        )}
+
+        {/* Advanced Filters Panel */}
+        {showAdvancedFilters && (
+          <div className="mt-4 max-w-4xl rounded-xl border border-border bg-card/40 p-4 animate-fade-up">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold">Advanced Filters</div>
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="text-xs font-semibold text-primary hover:text-primary/80 flex items-center gap-1"
+                >
+                  <X className="h-3 w-3" /> Clear All
+                </button>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              {/* Genre Filter */}
+              <div>
+                <div className="text-xs text-muted-foreground mb-2">Genre</div>
+                <div className="flex flex-wrap gap-2">
+                  {GENRE_FILTERS.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setGenreFilter(item.id)}
+                      className={`touch-card shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        genreFilter === item.id
+                          ? "border-primary bg-primary text-background"
+                          : "border-border bg-background/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mood Filter */}
+              <div>
+                <div className="text-xs text-muted-foreground mb-2">Mood</div>
+                <div className="flex flex-wrap gap-2">
+                  {MOOD_FILTERS.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setMoodFilter(item.id)}
+                      className={`touch-card shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        moodFilter === item.id
+                          ? "border-primary bg-primary text-background"
+                          : "border-border bg-background/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Language Filter */}
+              <div>
+                <div className="text-xs text-muted-foreground mb-2">Language</div>
+                <div className="flex flex-wrap gap-2">
+                  {LANGUAGE_FILTERS.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setLanguageFilter(item.id)}
+                      className={`touch-card shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        languageFilter === item.id
+                          ? "border-primary bg-primary text-background"
+                          : "border-border bg-background/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Sort Options */}
+              <div>
+                <div className="text-xs text-muted-foreground mb-2">Sort By</div>
+                <div className="flex flex-wrap gap-2">
+                  {SORT_OPTIONS.map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => setSortBy(item.id)}
+                      className={`touch-card shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                        sortBy === item.id
+                          ? "border-primary bg-primary text-background"
+                          : "border-border bg-background/60 text-muted-foreground hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
         )}
       </div>

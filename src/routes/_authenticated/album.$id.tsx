@@ -120,24 +120,6 @@ function AlbumPage() {
             </div>
             <div className="text-sm text-muted-foreground">{fmt(totalDuration)}</div>
           </div>
-          {data.album.genre && (
-            <div className="p-4 rounded-xl bg-card/40 border border-border/30">
-              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
-                <Music2 className="h-4 w-4 text-primary" />
-                Genre
-              </div>
-              <div className="text-sm text-muted-foreground">{data.album.genre}</div>
-            </div>
-          )}
-          {data.album.label && (
-            <div className="p-4 rounded-xl bg-card/40 border border-border/30">
-              <div className="flex items-center gap-2 text-sm font-semibold mb-2">
-                <Share2 className="h-4 w-4 text-primary" />
-                Label
-              </div>
-              <div className="text-sm text-muted-foreground">{data.album.label}</div>
-            </div>
-          )}
         </div>
       </section>
     </div>

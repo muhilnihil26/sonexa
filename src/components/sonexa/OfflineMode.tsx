@@ -1,5 +1,10 @@
 import { useState, useEffect } from "react";
-import { Download, Wifi, WifiOff, RefreshCw, Trash2, CheckCircle, AlertCircle } from "lucide-react";
+import { Download, Wifi, WifiOff, RefreshCw, Trash2, CheckCircle, AlertCircle, Settings, HardDrive, Pause, Play } from "lucide-react";
+import { readOfflineTracks, saveOfflineTrack } from "@/lib/offline-library";
+import { useSession } from "@/lib/auth";
+import { useLocalLibrary } from "@/lib/local-library";
+import { type Track } from "@/lib/player-store";
+import { toast } from "sonner";
 
 interface OfflineTrack {
   id: string;
@@ -9,43 +14,31 @@ interface OfflineTrack {
   size: string;
   downloaded: boolean;
   lastUpdated: string;
+  progress?: number;
+  downloading?: boolean;
 }
 
-const MOCK_OFFLINE_TRACKS: OfflineTrack[] = [
-  {
-    id: "1",
-    title: "Naa Ready",
-    artist: "Anirudh Ravichander",
-    cover: "",
-    size: "4.2 MB",
-    downloaded: true,
-    lastUpdated: "2 hours ago",
-  },
-  {
-    id: "2",
-    title: "Aradhya",
-    artist: "Hesham Abdul Wahab",
-    cover: "",
-    size: "3.8 MB",
-    downloaded: true,
-    lastUpdated: "5 hours ago",
-  },
-  {
-    id: "3",
-    title: "Kalaavathi",
-    artist: "S. Thaman",
-    cover: "",
-    size: "5.1 MB",
-    downloaded: false,
-    lastUpdated: "1 day ago",
-  },
-];
+interface OfflineSettings {
+  autoDownloadFavorites: boolean;
+  wifiOnly: boolean;
+  audioQuality: "high" | "medium" | "low";
+  maxStorageGB: number;
+}
 
 export function OfflineMode() {
+  const { user } = useSession();
+  const { likes } = useLocalLibrary();
   const [isOnline, setIsOnline] = useState(true);
-  const [offlineTracks, setOfflineTracks] = useState<OfflineTrack[]>(MOCK_OFFLINE_TRACKS);
-  const [storageUsed, setStorageUsed] = useState("127 MB");
-  const [storageTotal, setStorageTotal] = useState("1 GB");
+  const [offlineTracks, setOfflineTracks] = useState<OfflineTrack[]>([]);
+  const [storageUsed, setStorageUsed] = useState(0);
+  const [storageTotal, setStorageTotal] = useState(1024); // 1GB in MB
+  const [settings, setSettings] = useState<OfflineSettings>({
+    autoDownloadFavorites: true,
+    wifiOnly: true,
+    audioQuality: "high",
+    maxStorageGB: 1,
+  });
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
@@ -62,35 +55,126 @@ export function OfflineMode() {
     };
   }, []);
 
-  const downloadTrack = (trackId: string) => {
-    setOfflineTracks(
-      offlineTracks.map((track) =>
-        track.id === trackId ? { ...track, downloaded: true, lastUpdated: "Just now" } : track
-      )
-    );
+  // Load offline tracks from localStorage
+  useEffect(() => {
+    const tracks = readOfflineTracks(user?.email);
+    const converted: OfflineTrack[] = tracks.map((track) => ({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      cover: track.cover,
+      size: "0 MB", // Would need to calculate actual size
+      downloaded: true,
+      lastUpdated: "Recently",
+    }));
+    setOfflineTracks(converted);
+    
+    // Calculate storage usage (estimate)
+    const estimatedSize = tracks.length * 4; // Assume 4MB per track
+    setStorageUsed(estimatedSize);
+  }, [user?.email]);
+
+  // Auto-download favorites when settings allow
+  useEffect(() => {
+    if (!settings.autoDownloadFavorites || !isOnline || !user?.email) return;
+    if (settings.wifiOnly && !navigator.onLine) return;
+
+    const favoriteIds = Object.keys(likes);
+    const offlineIds = offlineTracks.map((t) => t.id);
+    const toDownload = favoriteIds.filter((id) => !offlineIds.includes(id));
+    
+    // Download up to 5 favorites at a time
+    toDownload.slice(0, 5).forEach((id) => {
+      const track = likes[id];
+      if (track && track.kind !== "youtube" && track.audio) {
+        downloadTrack(track);
+      }
+    });
+  }, [likes, settings.autoDownloadFavorites, settings.wifiOnly, isOnline, user?.email, offlineTracks]);
+
+  const downloadTrack = async (track: Track) => {
+    if (!track.audio || track.kind === "youtube") {
+      toast.error("Cannot download YouTube tracks for offline use");
+      return;
+    }
+
+    // Check storage limit
+    if (storageUsed >= storageTotal) {
+      toast.error("Storage limit reached. Remove some tracks first.");
+      return;
+    }
+
+    setOfflineTracks((prev) => [
+      ...prev,
+      {
+        id: track.id,
+        title: track.title,
+        artist: track.artist,
+        cover: track.cover,
+        size: "4 MB",
+        downloaded: true,
+        lastUpdated: "Just now",
+        downloading: true,
+        progress: 0,
+      },
+    ]);
+
+    // Simulate download progress
+    let progress = 0;
+    const interval = setInterval(() => {
+      progress += 20;
+      setOfflineTracks((prev) =>
+        prev.map((t) =>
+          t.id === track.id ? { ...t, progress, downloading: progress < 100 } : t
+        )
+      );
+      if (progress >= 100) {
+        clearInterval(interval);
+        saveOfflineTrack(track, user?.email);
+        setStorageUsed((prev) => prev + 4);
+        toast.success(`Downloaded: ${track.title}`);
+      }
+    }, 500);
   };
 
   const removeTrack = (trackId: string) => {
-    setOfflineTracks(
-      offlineTracks.map((track) =>
-        track.id === trackId ? { ...track, downloaded: false } : track
-      )
-    );
+    setOfflineTracks((prev) => prev.filter((t) => t.id !== trackId));
+    setStorageUsed((prev) => Math.max(0, prev - 4));
+    toast.success("Track removed from offline storage");
   };
 
-  const syncAll = () => {
-    setOfflineTracks(
-      offlineTracks.map((track) => ({ ...track, downloaded: true, lastUpdated: "Just now" }))
+  const syncAll = async () => {
+    if (!user?.email) return;
+    
+    const allTracks = Object.values(likes).filter(
+      (track): track is Track =>
+        Boolean(track && track.kind !== "youtube" && track.audio)
     );
+    
+    const existingIds = offlineTracks.map((t) => t.id);
+    const toDownload = allTracks.filter((track) => !existingIds.includes(track.id));
+    
+    if (toDownload.length === 0) {
+      toast.info("All favorites are already downloaded");
+      return;
+    }
+
+    toast.info(`Syncing ${toDownload.length} tracks...`);
+    
+    for (const track of toDownload.slice(0, 10)) {
+      await downloadTrack(track);
+    }
   };
 
   const clearAll = () => {
-    setOfflineTracks(
-      offlineTracks.map((track) => ({ ...track, downloaded: false }))
-    );
+    if (!confirm("Are you sure you want to remove all offline tracks?")) return;
+    setOfflineTracks([]);
+    setStorageUsed(0);
+    localStorage.removeItem(`sonexa.offline.v1:${(user?.email || "guest").toLowerCase()}`);
+    toast.success("All offline tracks cleared");
   };
 
-  const storagePercentage = (parseInt(storageUsed) / parseInt(storageTotal)) * 100;
+  const storagePercentage = (storageUsed / storageTotal) * 100;
 
   return (
     <div className="space-y-6">
@@ -182,10 +266,10 @@ export function OfflineMode() {
                   </div>
                 )}
                 <button
-                  onClick={() => (track.downloaded ? removeTrack(track.id) : downloadTrack(track.id))}
+                  onClick={() => removeTrack(track.id)}
                   className="px-3 py-1.5 rounded-lg bg-card/60 hover:bg-card transition text-sm"
                 >
-                  {track.downloaded ? "Remove" : "Download"}
+                  Remove
                 </button>
               </div>
             </div>
@@ -195,38 +279,104 @@ export function OfflineMode() {
 
       {/* Offline Settings */}
       <section className="p-4 rounded-xl bg-card/40 border border-border/30">
-        <h4 className="font-semibold mb-3">Offline Settings</h4>
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">Auto-download favorites</div>
-              <div className="text-xs text-muted-foreground">
-                Automatically download songs you like
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="font-semibold flex items-center gap-2">
+            <Settings className="h-4 w-4" /> Offline Settings
+          </h4>
+          <button
+            onClick={() => setShowSettings(!showSettings)}
+            className="text-xs text-primary hover:underline"
+          >
+            {showSettings ? "Hide" : "Show"}
+          </button>
+        </div>
+        {showSettings && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Auto-download favorites</div>
+                <div className="text-xs text-muted-foreground">
+                  Automatically download songs you like
+                </div>
               </div>
+              <input
+                type="checkbox"
+                className="w-5 h-5 rounded accent-primary"
+                checked={settings.autoDownloadFavorites}
+                onChange={(e) => setSettings({ ...settings, autoDownloadFavorites: e.target.checked })}
+              />
             </div>
-            <input type="checkbox" className="w-5 h-5 rounded" defaultChecked />
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Download on Wi-Fi only</div>
+                <div className="text-xs text-muted-foreground">
+                  Save mobile data by downloading only on Wi-Fi
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                className="w-5 h-5 rounded accent-primary"
+                checked={settings.wifiOnly}
+                onChange={(e) => setSettings({ ...settings, wifiOnly: e.target.checked })}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Audio quality</div>
+                <div className="text-xs text-muted-foreground">
+                  Choose audio quality for downloads
+                </div>
+              </div>
+              <select
+                className="px-3 py-1.5 rounded-lg bg-card/60 text-sm"
+                value={settings.audioQuality}
+                onChange={(e) => setSettings({ ...settings, audioQuality: e.target.value as any })}
+              >
+                <option value="high">High (320kbps)</option>
+                <option value="medium">Medium (192kbps)</option>
+                <option value="low">Low (128kbps)</option>
+              </select>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium">Max storage</div>
+                <div className="text-xs text-muted-foreground">
+                  Maximum offline storage limit
+                </div>
+              </div>
+              <select
+                className="px-3 py-1.5 rounded-lg bg-card/60 text-sm"
+                value={settings.maxStorageGB}
+                onChange={(e) => setSettings({ ...settings, maxStorageGB: parseInt(e.target.value) })}
+              >
+                <option value={0.5}>500 MB</option>
+                <option value={1}>1 GB</option>
+                <option value={2}>2 GB</option>
+                <option value={5}>5 GB</option>
+              </select>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">Download on Wi-Fi only</div>
-              <div className="text-xs text-muted-foreground">
-                Save mobile data by downloading only on Wi-Fi
-              </div>
-            </div>
-            <input type="checkbox" className="w-5 h-5 rounded" defaultChecked />
+        )}
+      </section>
+
+      {/* Storage Management */}
+      <section className="p-4 rounded-xl bg-card/40 border border-border/30">
+        <div className="flex items-center gap-2 mb-3">
+          <HardDrive className="h-4 w-4 text-primary" />
+          <h4 className="font-semibold">Storage Management</h4>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Used</span>
+            <span className="font-medium">{storageUsed} MB</span>
           </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="text-sm font-medium">Audio quality</div>
-              <div className="text-xs text-muted-foreground">
-                Choose audio quality for downloads
-              </div>
-            </div>
-            <select className="px-3 py-1.5 rounded-lg bg-card/60 text-sm">
-              <option>High (320kbps)</option>
-              <option>Medium (192kbps)</option>
-              <option>Low (128kbps)</option>
-            </select>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Available</span>
+            <span className="font-medium">{storageTotal - storageUsed} MB</span>
+          </div>
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Tracks</span>
+            <span className="font-medium">{offlineTracks.length}</span>
           </div>
         </div>
       </section>

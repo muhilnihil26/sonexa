@@ -103,11 +103,11 @@ async function findPublicSong(trackId: string) {
 }
 
 export const getPublicSong = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ trackId: z.string().min(1).max(180) }))
+  .validator(z.object({ trackId: z.string().min(1).max(180) }))
   .handler(async ({ data }) => ({ track: await findPublicSong(data.trackId) }));
 
 export const getSongSocial = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ trackId: z.string().min(1).max(180) }))
+  .validator(z.object({ trackId: z.string().min(1).max(180) }))
   .handler(async ({ data }) => {
     const trackId = safeDocId(data.trackId);
     const [stats, comments] = await Promise.all([
@@ -127,7 +127,7 @@ export const getSongSocial = createServerFn({ method: "POST" })
   });
 
 export const recordSongView = createServerFn({ method: "POST" })
-  .inputValidator(z.object({ trackId: z.string().min(1).max(180) }))
+  .validator(z.object({ trackId: z.string().min(1).max(180) }))
   .handler(async ({ data }) => {
     const trackId = safeDocId(data.trackId);
     const existing = await getFirestoreDoc<SongStats>(`sonexa_song_stats/${trackId}`).catch(
@@ -144,7 +144,7 @@ export const recordSongView = createServerFn({ method: "POST" })
 
 export const toggleSongLike = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(z.object({ trackId: z.string().min(1).max(180) }))
+  .validator(z.object({ trackId: z.string().min(1).max(180) }))
   .handler(async ({ data, context }) => {
     const trackId = safeDocId(data.trackId);
     const likeId = safeDocId(`${data.trackId}_${context.userId}`);
@@ -182,7 +182,7 @@ export const toggleSongLike = createServerFn({ method: "POST" })
 
 export const addSongComment = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       trackId: z.string().min(1).max(180),
       body: z.string().min(1).max(500),
@@ -215,7 +215,7 @@ export const getIntroConfig = createServerFn({ method: "GET" }).handler(async ()
 
 export const adminSetIntroConfig = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       youtubeUrl: z.string().url().or(z.literal("")),
       title: z.string().min(1).max(120).default("Listen Beyond Limits"),
@@ -246,7 +246,7 @@ export const getFeatureConfig = createServerFn({ method: "GET" }).handler(async 
 
 export const adminSetFeatureConfig = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(z.object({ itunesEnabled: z.boolean(), radioEnabled: z.boolean(), playerTransparency: z.number().optional() }))
+  .validator(z.object({ itunesEnabled: z.boolean(), radioEnabled: z.boolean(), playerTransparency: z.number().optional() }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     await setFirestoreDoc(
@@ -269,7 +269,7 @@ export const getHomeConfig = createServerFn({ method: "GET" }).handler(async () 
 
 export const adminSetHomeConfig = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       backgroundImageUrl: z.string().url().or(z.literal("")),
       overlayOpacity: z.number().min(0).max(1),
@@ -281,7 +281,7 @@ export const adminSetHomeConfig = createServerFn({ method: "POST" })
       "sonexa_settings/home",
       {
         background_image_url: data.backgroundImageUrl,
-        overlay_opacity: String(data.overlayOpacity),
+        overlay_opacity: data.overlayOpacity,
         updated_at: nowIso(),
       },
       context.firebaseToken,
@@ -291,7 +291,7 @@ export const adminSetHomeConfig = createServerFn({ method: "POST" })
 
 export const adminBackupLocalLibrary = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(z.object({ playlists: z.any(), likes: z.any(), taste: z.any().optional(), languages: z.any().optional() }))
+  .validator(z.object({ playlists: z.any(), likes: z.any(), taste: z.any().optional(), languages: z.any().optional() }))
   .handler(async ({ data, context }) => {
     await setFirestoreDoc(`sonexa_user_backups/${context.userId}`, {
       playlists: JSON.stringify(data.playlists),
@@ -321,7 +321,7 @@ export const restoreLocalLibrary = createServerFn({ method: "GET" })
 
 export const createProfilePhotoUpload = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       fileName: z.string().min(1).max(180),
       contentType: z.string().startsWith("image/").max(80),
@@ -343,7 +343,7 @@ export const createProfilePhotoUpload = createServerFn({ method: "POST" })
 
 export const getProfilePhotoUrl = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(z.object({ path: z.string().min(1).max(500) }))
+  .validator(z.object({ path: z.string().min(1).max(500) }))
   .handler(async ({ data, context }) => {
     const prefix = `profile-photos/${safeDocId(context.userId)}/`;
     if (!data.path.startsWith(prefix)) throw new Error("Invalid profile photo path");

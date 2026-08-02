@@ -28,6 +28,7 @@ function createPublicSupabaseClient() {
 }
 
 // PUBLIC reads via admin client (RLS bypass with safe projection)
+// Only shows APPROVED songs
 export const listSongs = createServerFn({ method: "GET" }).handler(async () => {
   const supabase = createPublicSupabaseClient();
   const [{ data, error }, firebaseSongs] = await Promise.all([
@@ -36,9 +37,12 @@ export const listSongs = createServerFn({ method: "GET" }).handler(async () => {
       .select(
         "id,title,cover_url,audio_url,genre,mood,tags,play_count,artist_id,album_id,artists(id,name,slug),albums(id,title)",
       )
+      .eq("approved", true)
       .order("created_at", { ascending: false })
       .limit(60),
-    listFirestoreDocs("sonexa_songs").catch(() => []),
+    listFirestoreDocs("sonexa_songs")
+      .then((docs) => docs.filter((d) => d.approved !== false))
+      .catch(() => []),
   ]);
   if (error) throw error;
   const mappedFirebaseSongs = firebaseSongs.map((song) => ({
@@ -59,7 +63,7 @@ export const listSongs = createServerFn({ method: "GET" }).handler(async () => {
 });
 
 export const getArtist = createServerFn({ method: "POST" })
-  .inputValidator(id)
+  .validator(id)
   .handler(async ({ data }) => {
     const supabase = createPublicSupabaseClient();
     const [artist, songs, albums] = await Promise.all([
@@ -81,7 +85,7 @@ export const getArtist = createServerFn({ method: "POST" })
   });
 
 export const getAlbum = createServerFn({ method: "POST" })
-  .inputValidator(id)
+  .validator(id)
   .handler(async ({ data }) => {
     const supabase = createPublicSupabaseClient();
     const [album, songs] = await Promise.all([
@@ -97,7 +101,7 @@ export const getAlbum = createServerFn({ method: "POST" })
   });
 
 export const getPlaylist = createServerFn({ method: "POST" })
-  .inputValidator(id)
+  .validator(id)
   .handler(async ({ data }) => {
     const supabase = createPublicSupabaseClient();
     const { data: pl, error } = await supabase
@@ -114,7 +118,7 @@ export const getPlaylist = createServerFn({ method: "POST" })
 // AUTH'D writes
 export const createPlaylist = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({ title: z.string().min(1).max(80), description: z.string().max(280).optional() }),
   )
   .handler(async ({ data, context }) => {
@@ -159,7 +163,7 @@ export const myLikes = createServerFn({ method: "GET" })
 
 export const toggleLike = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ songId: z.string().uuid() }))
+  .validator(z.object({ songId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const existing = await supabaseAdmin
@@ -193,7 +197,7 @@ export const adminListSongs = createServerFn({ method: "GET" })
     const [{ data, error }, firebaseSongs] = await Promise.all([
       supabaseAdmin
         .from("songs")
-        .select("id,title,cover_url,audio_url,language,genre,artist_id,artists(name)")
+        .select("id,title,cover_url,audio_url,language,genre,artist_id,approved,artists(name)")
         .order("created_at", { ascending: false })
         .limit(500),
       listFirestoreDocs("sonexa_songs", context.firebaseToken).catch(() => []),
@@ -207,6 +211,7 @@ export const adminListSongs = createServerFn({ method: "GET" })
       language: typeof song.language === "string" ? song.language : null,
       genre: typeof song.genre === "string" ? song.genre : null,
       artist_id: null,
+      approved: song.approved !== false,
       artists: { name: String(song.artist ?? "Unknown") },
     }));
     return { songs: [...mappedFirebaseSongs, ...(data ?? [])] };
@@ -214,12 +219,13 @@ export const adminListSongs = createServerFn({ method: "GET" })
 
 export const adminUpdateSong = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       songId: z.string().uuid(),
       title: z.string().min(1).max(200).optional(),
       language: z.string().max(40).optional(),
       genre: z.string().max(40).optional(),
+      approved: z.boolean().optional(),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -232,9 +238,10 @@ export const adminUpdateSong = createServerFn({ method: "POST" })
         `sonexa_songs/${docId}`,
         {
           ...existing,
-          title: data.title,
-          language: data.language,
-          genre: data.genre,
+          title: data.title ?? existing.title,
+          language: data.language ?? existing.language,
+          genre: data.genre ?? existing.genre,
+          approved: data.approved !== undefined ? data.approved : existing.approved,
           updated_at: new Date().toISOString(),
         },
         context.firebaseToken,
@@ -242,10 +249,11 @@ export const adminUpdateSong = createServerFn({ method: "POST" })
       return { ok: true };
     }
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const patch: { title?: string; language?: string; genre?: string } = {};
+    const patch: { title?: string; language?: string; genre?: string; approved?: boolean } = {};
     if (data.title !== undefined) patch.title = data.title;
     if (data.language !== undefined) patch.language = data.language;
     if (data.genre !== undefined) patch.genre = data.genre;
+    if (data.approved !== undefined) patch.approved = data.approved;
     const { error } = await supabaseAdmin.from("songs").update(patch).eq("id", data.songId);
     if (error) throw error;
     return { ok: true };
@@ -253,7 +261,7 @@ export const adminUpdateSong = createServerFn({ method: "POST" })
 
 export const adminDeleteSong = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ songId: z.string().min(1).max(120) }))
+  .validator(z.object({ songId: z.string().min(1).max(120) }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     if (data.songId.startsWith("firebase_")) {
@@ -275,13 +283,14 @@ export const adminDeleteSong = createServerFn({ method: "POST" })
 
 export const adminCreateFirebaseSong = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       title: z.string().min(1).max(200),
       artist: z.string().min(1).max(200),
       audioUrl: z.string().url(),
       coverUrl: z.string().url(),
       language: z.string().max(40).default("Tamil"),
+      approved: z.boolean().default(false),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -298,6 +307,7 @@ export const adminCreateFirebaseSong = createServerFn({ method: "POST" })
         language: data.language,
         genre: null,
         mood: null,
+        approved: data.approved,
         uploaded_by: context.userId,
         created_at: now,
         updated_at: now,
@@ -309,7 +319,7 @@ export const adminCreateFirebaseSong = createServerFn({ method: "POST" })
 
 export const adminCreateUploadUrls = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({ audioName: z.string().min(1).max(200), coverName: z.string().min(1).max(200) }),
   )
   .handler(async ({ data, context }) => {
@@ -332,7 +342,7 @@ export const adminCreateUploadUrls = createServerFn({ method: "POST" })
 
 export const adminCreateSongFromUpload = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       title: z.string().min(1).max(200),
       artist: z.string().min(1).max(200),
@@ -385,7 +395,7 @@ export const adminCreateSongFromUpload = createServerFn({ method: "POST" })
 // AI enrichment - admin-only, calls Lovable AI Gateway
 export const enrichSong = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ songId: z.string().uuid() }))
+  .validator(z.object({ songId: z.string().uuid() }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 
@@ -500,7 +510,7 @@ function slugify(s: string) {
 
 export const seedFromITunes = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ extraQuery: z.string().max(100).optional() }))
+  .validator(z.object({ extraQuery: z.string().max(100).optional() }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
 

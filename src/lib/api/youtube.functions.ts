@@ -305,12 +305,12 @@ const language = z.string().min(2).max(40).default("tamil");
 
 export const lookupYouTube = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(z.object({ url: z.string().min(1).max(500) }))
+  .validator(z.object({ url: z.string().min(1).max(500) }))
   .handler(async ({ data }) => lookupVideo(data.url));
 
 export const searchYouTube = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       query: z.string().min(2).max(120),
       limit: z.number().int().min(1).max(80).default(24),
@@ -351,7 +351,7 @@ export const listAdminYouTubePlaylists = createServerFn({ method: "GET" }).handl
 
 export const adminAddYouTubeTrack = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ url: z.string().min(1).max(500), language }))
+  .validator(z.object({ url: z.string().min(1).max(500), language }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const meta = await lookupVideo(data.url);
@@ -369,7 +369,7 @@ export const adminAddYouTubeTrack = createServerFn({ method: "POST" })
 
 export const adminAddYouTubeChannel = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       url: z.string().min(1).max(500),
       language,
@@ -402,7 +402,7 @@ export const adminAddYouTubeChannel = createServerFn({ method: "POST" })
 
 export const adminAddYouTubePlaylist = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       url: z.string().min(1).max(500),
       language,
@@ -457,7 +457,7 @@ export const adminAddYouTubePlaylist = createServerFn({ method: "POST" })
 
 export const adminRemoveYouTubeTrack = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ videoId: z.string().min(11).max(20) }))
+  .validator(z.object({ videoId: z.string().min(11).max(20) }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     await deleteFirestoreDoc(`sonexa_youtube_tracks/${data.videoId}`, context.firebaseToken);
@@ -466,7 +466,7 @@ export const adminRemoveYouTubeTrack = createServerFn({ method: "POST" })
 
 export const adminUpdateYouTubePlaylist = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       playlistId: z.string().min(1),
       title: z.string().min(1).max(200),
@@ -496,7 +496,7 @@ export const adminUpdateYouTubePlaylist = createServerFn({ method: "POST" })
 
 export const adminDeleteYouTubePlaylist = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ playlistId: z.string().min(1) }))
+  .validator(z.object({ playlistId: z.string().min(1) }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     await deleteFirestoreDoc(`sonexa_youtube_playlists/${data.playlistId}`, context.firebaseToken);
@@ -505,66 +505,42 @@ export const adminDeleteYouTubePlaylist = createServerFn({ method: "POST" })
 
 export const adminCreateYouTubeBackupUploadUrl = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
-      videoId: z.string().min(11).max(20),
-      fileName: z.string().min(1).max(200),
+      videoId: z.string(),
+      fileName: z.string(),
     }),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const track = await getFirestoreDoc<Omit<YouTubeTrackRow, "id">>(
-      `sonexa_youtube_tracks/${data.videoId}`,
-      context.firebaseToken,
-    );
-    if (!track) throw new Error("YouTube song not found");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const clean = data.fileName.replace(/[^a-zA-Z0-9._-]+/g, "-").slice(-120);
-    const path = `youtube-backups/${data.videoId}/${crypto.randomUUID()}-${clean}`;
-    const upload = await supabaseAdmin.storage.from("audio").createSignedUploadUrl(path);
-    if (upload.error) throw upload.error;
-    return { path, token: upload.data.token };
+    
+    // YouTube ToS Compliance: This function is disabled to ensure compliance with YouTube's Terms of Service.
+    // YouTube does not permit uploading or storing downloaded content.
+    
+    throw new Error("YouTube backup upload functionality has been disabled to comply with YouTube's Terms of Service.");
   });
 
 export const adminAttachYouTubeBackup = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
-      videoId: z.string().min(11).max(20),
-      path: z.string().min(1).max(500),
-      kind: z.enum(["audio", "video"]).default("audio"),
+      videoId: z.string(),
+      path: z.string(),
+      kind: z.enum(["audio", "video"]),
     }),
   )
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
-    const track = await getFirestoreDoc<Omit<YouTubeTrackRow, "id">>(
-      `sonexa_youtube_tracks/${data.videoId}`,
-      context.firebaseToken,
-    );
-    if (!track) throw new Error("YouTube song not found");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const signed = await supabaseAdmin.storage
-      .from("audio")
-      .createSignedUrl(data.path, 60 * 60 * 24 * 365);
-    if (signed.error) throw signed.error;
-    await setFirestoreDoc(
-      `sonexa_youtube_tracks/${data.videoId}`,
-      {
-        ...track,
-        backup_url: signed.data.signedUrl,
-        backup_path: data.path,
-        backup_kind: data.kind,
-        backup_uploaded_at: nowIso(),
-        updated_at: nowIso(),
-      },
-      context.firebaseToken,
-    );
-    return { url: signed.data.signedUrl };
+    
+    // YouTube ToS Compliance: This function is disabled to ensure compliance with YouTube's Terms of Service.
+    // YouTube does not permit downloading or storing content without explicit permission.
+    
+    throw new Error("YouTube backup functionality has been disabled to comply with YouTube's Terms of Service. The app uses YouTube's official IFrame API for streaming.");
   });
 
 export const submitYouTubeRequest = createServerFn({ method: "POST" })
   .middleware([attachFirebaseAuth, requireFirebaseAuth])
-  .inputValidator(z.object({ url: z.string().min(1).max(500), language }))
+  .validator(z.object({ url: z.string().min(1).max(500), language }))
   .handler(async ({ data, context }) => {
     const meta = await lookupVideo(data.url);
     const exists = await getFirestoreDoc<Omit<YouTubeTrackRow, "id">>(
@@ -613,7 +589,7 @@ export const adminListYouTubeRequests = createServerFn({ method: "GET" })
 
 export const adminReviewYouTubeRequest = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ requestId: z.string().min(12).max(200), approve: z.boolean() }))
+  .validator(z.object({ requestId: z.string().min(12).max(200), approve: z.boolean() }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const req = await getFirestoreDoc<Omit<YouTubeRequestRow, "id">>(
@@ -894,7 +870,7 @@ async function processDownloadJob(
 
 export const adminStartBulkDownload = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       language: z.string().optional(),
       limit: z.number().int().min(1).max(500).default(100),
@@ -903,39 +879,13 @@ export const adminStartBulkDownload = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     
-    const tracks = await listFirestoreDocs<Omit<YouTubeTrackRow, "id">>(
-      "sonexa_youtube_tracks",
-      context.firebaseToken,
-    ).catch(() => []);
-
-    // Filter by language if specified
-    let filteredTracks = tracks;
-    if (data.language) {
-      filteredTracks = tracks.filter((track) => track.language === data.language);
-    }
-
-    // Filter out tracks that already have backups
-    const tracksWithoutBackups = filteredTracks.filter(
-      (track) => !track.backup_url || !track.backup_uploaded_at,
-    );
-
-    // Apply limit
-    const tracksToDownload = tracksWithoutBackups.slice(0, data.limit);
-
-    if (tracksToDownload.length === 0) {
-      return {
-        job: null,
-        message: data.language
-          ? `No tracks without backups found for language: ${data.language}`
-          : "All tracks already have backups",
-      };
-    }
-
-    const job = await startBulkDownloadJob(tracksToDownload, context.firebaseToken);
+    // YouTube ToS Compliance: This function is disabled to ensure compliance with YouTube's Terms of Service.
+    // YouTube does not permit downloading content without explicit permission.
+    // The app uses YouTube's IFrame API for streaming, which is the compliant method.
     
     return {
-      job,
-      message: `Started download job for ${tracksToDownload.length} tracks`,
+      job: null,
+      message: "YouTube download functionality has been disabled to comply with YouTube's Terms of Service. The app uses YouTube's official IFrame API for streaming, which is the compliant method for playback.",
     };
   });
 
@@ -958,7 +908,7 @@ export const adminGetDownloadStatus = createServerFn({ method: "GET" })
 
 export const adminCancelDownload = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ jobId: z.string() }))
+  .validator(z.object({ jobId: z.string() }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     
@@ -975,7 +925,7 @@ export const adminCancelDownload = createServerFn({ method: "POST" })
 // AI YouTube Discovery System
 export const adminDiscoverYouTubeContent = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       query: z.string().min(2).max(100),
       language: z.string().default("tamil"),
@@ -1093,7 +1043,7 @@ export const TAMIL_DISCOVERY_QUERIES = [
 
 export const adminAutoDiscoverTamilContent = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       autoApprove: z.boolean().default(false),
       queriesPerRun: z.number().int().min(1).max(5).default(3),
@@ -1183,7 +1133,7 @@ type RadioStationRow = {
   youtube_video_id: string;
   icon: string;
   color: string;
-  based_on: "song" | "artist" | "genre" | "custom";
+  based_on: "song" | "artist" | "genre" | "custom" | "mood";
   seed_track?: string;
   seed_artist?: string;
   seed_genre?: string;
@@ -1201,14 +1151,14 @@ export const listRadioStations = createServerFn({ method: "GET" })
 
 export const adminCreateRadioStation = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       name: z.string().min(1),
       description: z.string().min(1),
-      youtubeUrl: z.string().url(),
+      youtubeUrl: z.string().url().optional(),
       icon: z.string().default("Radio"),
       color: z.string().default("from-purple-500 to-pink-500"),
-      basedOn: z.enum(["song", "artist", "genre", "custom"]).default("custom"),
+      basedOn: z.enum(["song", "artist", "genre", "custom", "mood"]).default("custom"),
       seedTrack: z.string().optional(),
       seedArtist: z.string().optional(),
       seedGenre: z.string().optional(),
@@ -1217,8 +1167,8 @@ export const adminCreateRadioStation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!context.isAdmin) throw new Error("Admin only");
 
-    const videoId = parseYouTubeId(data.youtubeUrl);
-    if (!videoId) throw new Error("Invalid YouTube URL");
+    const videoId = data.youtubeUrl ? parseYouTubeId(data.youtubeUrl) ?? "" : "";
+    if (data.youtubeUrl && !videoId) throw new Error("Invalid YouTube URL");
 
     const stationId = `radio_${crypto.randomUUID()}`;
     const now = nowIso();
@@ -1227,7 +1177,7 @@ export const adminCreateRadioStation = createServerFn({ method: "POST" })
       id: stationId,
       name: data.name,
       description: data.description,
-      youtube_url: data.youtubeUrl,
+      youtube_url: data.youtubeUrl ?? "",
       youtube_video_id: videoId,
       icon: data.icon,
       color: data.color,
@@ -1246,15 +1196,15 @@ export const adminCreateRadioStation = createServerFn({ method: "POST" })
 
 export const adminUpdateRadioStation = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       stationId: z.string().min(1),
       name: z.string().min(1),
       description: z.string().min(1),
-      youtubeUrl: z.string().url(),
+      youtubeUrl: z.string().url().optional(),
       icon: z.string(),
       color: z.string(),
-      basedOn: z.enum(["song", "artist", "genre", "custom"]),
+      basedOn: z.enum(["song", "artist", "genre", "custom", "mood"]),
       seedTrack: z.string().optional(),
       seedArtist: z.string().optional(),
       seedGenre: z.string().optional(),
@@ -1263,8 +1213,8 @@ export const adminUpdateRadioStation = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (!context.isAdmin) throw new Error("Admin only");
 
-    const videoId = parseYouTubeId(data.youtubeUrl);
-    if (!videoId) throw new Error("Invalid YouTube URL");
+    const videoId = data.youtubeUrl ? parseYouTubeId(data.youtubeUrl) ?? "" : "";
+    if (data.youtubeUrl && !videoId) throw new Error("Invalid YouTube URL");
 
     const existing = await getFirestoreDoc<RadioStationRow>(
       `sonexa_radio_stations/${data.stationId}`,
@@ -1276,7 +1226,7 @@ export const adminUpdateRadioStation = createServerFn({ method: "POST" })
       ...existing,
       name: data.name,
       description: data.description,
-      youtube_url: data.youtubeUrl,
+      youtube_url: data.youtubeUrl ?? "",
       youtube_video_id: videoId,
       icon: data.icon,
       color: data.color,
@@ -1297,7 +1247,7 @@ export const adminUpdateRadioStation = createServerFn({ method: "POST" })
 
 export const adminDeleteRadioStation = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(
+  .validator(
     z.object({
       stationId: z.string().min(1),
     }),

@@ -27,32 +27,10 @@ export function SongCard({
   const canDownload = track.kind !== "youtube" && !!track.audio;
   const queued = playQueue.some((item) => item.id === track.id);
 
-  async function requestBackup(e: React.MouseEvent) {
+  function downloadTrack(e: React.MouseEvent) {
     e.stopPropagation();
-    if (!track.kind || track.kind !== "youtube") {
-      toast.error("Only YouTube videos can be backed up");
-      return;
-    }
-    
-    try {
-      const response = await fetch("/api/backup/request", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          videoId: track.youtube_video_id,
-          title: track.title,
-          artist: track.artist,
-        }),
-      });
-      
-      if (response.ok) {
-        toast.success("Backup requested - will be available soon");
-      } else {
-        toast.error("Could not request backup");
-      }
-    } catch (error) {
-      toast.error("Failed to request backup");
-    }
+    saveOfflineTrack(track, user?.email);
+    toast.success(`Saved ${track.title} for offline listening`);
   }
 
   async function handleLike(e: React.MouseEvent) {
@@ -164,15 +142,6 @@ export function SongCard({
         >
           <Plus className="h-4 w-4" />
         </button>
-        {track.kind === "youtube" && (
-          <button
-            onClick={requestBackup}
-            className="h-8 w-8 rounded-full grid place-items-center bg-background/70 hover:bg-background backdrop-blur-md text-foreground/80"
-            title="Request backup"
-          >
-            <Download className="h-4 w-4" />
-          </button>
-        )}
         {canDownload && (
           <button
             onClick={downloadTrack}

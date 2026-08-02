@@ -4,7 +4,9 @@ type FirestoreValue =
   | { stringValue: string }
   | { timestampValue: string }
   | { booleanValue: boolean }
-  | { nullValue: null };
+  | { nullValue: null }
+  | { doubleValue: number }
+  | { integerValue: string };
 
 type FirestoreDocument = {
   name: string;
@@ -26,12 +28,16 @@ function docId(name: string) {
   return name.split("/").pop() ?? "";
 }
 
-function toFirestoreFields(data: Record<string, string | boolean | null | undefined>) {
+function toFirestoreFields(data: Record<string, string | boolean | number | null | undefined>) {
   const fields: Record<string, FirestoreValue> = {};
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined) continue;
     if (value === null) fields[key] = { nullValue: null };
     else if (typeof value === "boolean") fields[key] = { booleanValue: value };
+    else if (typeof value === "number") {
+      if (Number.isInteger(value)) fields[key] = { integerValue: String(value) };
+      else fields[key] = { doubleValue: value };
+    }
     else if (key.endsWith("At")) fields[key] = { timestampValue: value };
     else fields[key] = { stringValue: value };
   }
@@ -39,11 +45,13 @@ function toFirestoreFields(data: Record<string, string | boolean | null | undefi
 }
 
 function fromFirestoreFields(fields: FirestoreDocument["fields"] = {}) {
-  const out: Record<string, string | boolean | null> = {};
+  const out: Record<string, string | boolean | number | null> = {};
   for (const [key, value] of Object.entries(fields)) {
     if ("stringValue" in value) out[key] = value.stringValue;
     else if ("timestampValue" in value) out[key] = value.timestampValue;
     else if ("booleanValue" in value) out[key] = value.booleanValue;
+    else if ("doubleValue" in value) out[key] = value.doubleValue;
+    else if ("integerValue" in value) out[key] = parseInt(value.integerValue, 10);
     else out[key] = null;
   }
   return out;
@@ -79,7 +87,7 @@ async function firestoreFetch(path: string, init: RequestInit & { token?: string
   return res.json();
 }
 
-export async function getFirestoreDoc<T extends Record<string, string | boolean | null>>(
+export async function getFirestoreDoc<T extends Record<string, string | boolean | number | null>>(
   path: string,
   token?: string,
 ) {
@@ -92,7 +100,7 @@ export async function getFirestoreDoc<T extends Record<string, string | boolean 
   }
 }
 
-export async function listFirestoreDocs<T extends Record<string, string | boolean | null>>(
+export async function listFirestoreDocs<T extends Record<string, string | boolean | number | null>>(
   collection: string,
   token?: string,
 ) {
@@ -107,7 +115,7 @@ export async function listFirestoreDocs<T extends Record<string, string | boolea
 
 export async function setFirestoreDoc(
   path: string,
-  data: Record<string, string | boolean | null | undefined>,
+  data: Record<string, string | boolean | number | null | undefined>,
   token?: string,
 ) {
   const json = (await firestoreFetch(encodePath(path), {

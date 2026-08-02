@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { Radio, Play, Heart, Plus, Sparkles, Flame, Music2, Clock, TrendingUp, X } from "lucide-react";
-import { usePlayer } from "@/lib/player-store";
-import { useSession } from "@/lib/auth";
+import { Radio, Play, Heart, Plus, Sparkles, Flame, Music2, Clock, TrendingUp, X, Settings, Trash2, Palette } from "lucide-react";
+import { type Track, usePlayer } from "@/lib/player-store";
+import { useIsAdmin, useSession } from "@/lib/auth";
 import { toast } from "sonner";
 import { notifySuccess, notifyError } from "@/lib/notifications";
 import { useServerFn } from "@tanstack/react-start";
-import { useQuery } from "@tanstack/react-query";
-import { listRadioStations, listAdminYouTubeTracks } from "@/lib/api/youtube.functions";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { listRadioStations, listAdminYouTubeTracks, adminCreateRadioStation, adminDeleteRadioStation } from "@/lib/api/youtube.functions";
 
 interface Station {
   id: string;
@@ -17,7 +17,21 @@ interface Station {
   icon: string;
   color: string;
   based_on: "song" | "artist" | "genre" | "custom" | "mood";
+  seed_track?: string;
+  seed_artist?: string;
+  seed_genre?: string;
+  created_by?: string;
+  is_custom?: boolean;
 }
+
+type RadioCatalogRow = {
+  video_id: string;
+  title: string;
+  channel?: string | null;
+  thumbnail?: string | null;
+  backup_url?: string | null;
+  duration?: number;
+};
 
 const PREDEFINED_STATIONS: Station[] = [
   {
@@ -90,15 +104,58 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   Clock: <Clock className="h-6 w-6" />,
   TrendingUp: <TrendingUp className="h-6 w-6" />,
   Heart: <Heart className="h-6 w-6" />,
+  Settings: <Settings className="h-6 w-6" />,
+  Palette: <Palette className="h-6 w-6" />,
 };
+
+const COLOR_OPTIONS = [
+  "from-purple-500 to-pink-500",
+  "from-blue-500 to-indigo-500",
+  "from-green-500 to-teal-500",
+  "from-orange-500 to-red-500",
+  "from-cyan-500 to-blue-500",
+  "from-yellow-500 to-orange-500",
+  "from-pink-500 to-rose-500",
+  "from-violet-500 to-purple-500",
+];
+
+const ICON_OPTIONS = ["Radio", "Sparkles", "Music2", "Flame", "Clock", "TrendingUp", "Heart", "Settings", "Palette"];
+
+const BASED_ON_OPTIONS = [
+  { value: "custom", label: "Custom Mix" },
+  { value: "song", label: "Based on Song" },
+  { value: "artist", label: "Based on Artist" },
+  { value: "genre", label: "Based on Genre" },
+  { value: "mood", label: "Based on Mood" },
+];
 
 export function RadioStations() {
   const p = usePlayer();
   const { current, startRadio, queue } = p;
   const { user } = useSession();
+  const isAdmin = useIsAdmin(user?.email);
+  const queryClient = useQueryClient();
   const listStations = useServerFn(listRadioStations);
   const listTracks = useServerFn(listAdminYouTubeTracks);
+  const createStation = useServerFn(adminCreateRadioStation);
+  const deleteStation = useServerFn(adminDeleteRadioStation);
   const [selectedStation, setSelectedStation] = useState<string | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newStation, setNewStation] = useState<{
+    name: string;
+    description: string;
+    youtube_url: string;
+    icon: string;
+    color: string;
+    based_on: "song" | "artist" | "genre" | "custom" | "mood";
+  }>({
+    name: "",
+    description: "",
+    youtube_url: "",
+    icon: "Radio",
+    color: "from-purple-500 to-pink-500",
+    based_on: "custom",
+  });
 
   const { data: firestoreStations, isLoading } = useQuery({
     queryKey: ["radio-stations"],
@@ -113,7 +170,7 @@ export function RadioStations() {
 
   const customStations = (firestoreStations?.stations ?? []) as Station[];
   const allStations = [...PREDEFINED_STATIONS, ...customStations];
-  const allTracks = tracksData?.tracks || [];
+  const allTracks = (tracksData?.tracks ?? []) as RadioCatalogRow[];
 
   const playStation = async (station: Station) => {
     if (!user) {
@@ -124,63 +181,102 @@ export function RadioStations() {
     setSelectedStation(station.id);
     
     try {
-      // If station has a YouTube URL, fetch and play the video
+      // For custom stations with YouTube URLs, create a track from the station data
       if (station.youtube_url && station.youtube_video_id) {
-        const { lookupVideo } = await import("@/lib/api/youtube.functions");
-        const lookupFn = useServerFn(lookupVideo);
+        const track: Track = {
+          id: station.id,
+          title: station.name,
+          artist: station.description || "Unknown",
+          cover: "",
+          audio: "", // YouTube tracks don't need audio URL
+          kind: "youtube",
+          ytId: station.youtube_video_id,
+        };
         
-        const videoData = await lookupFn({ data: { url: station.youtube_url } });
-        
-        if (videoData) {
-          // Play the YouTube video directly
-          const track = {
-            id: videoData.id,
-            title: videoData.title,
-            artist: videoData.artist,
-            cover: videoData.cover,
-            kind: "youtube" as const,
-            youtube_video_id: videoData.youtube_video_id,
-            duration: videoData.duration,
-          };
-          
-          // Use the player to play this track and start radio
-          p.play(track);
-          await startRadio([track], user.email || user.id || "default");
-          notifySuccess(`Playing ${station.name}`);
-        } else {
-          throw new Error("Could not fetch video data");
-        }
-      } else {
-        // For predefined stations, use all available tracks as seed
-        const seedTracks = allTracks.length > 0 ? allTracks.map((t: any) => ({
-          id: t.id,
-          title: t.title,
-          artist: t.artist || t.channel || "Unknown",
-          cover: t.thumbnail || t.cover || "",
-          audio: t.audio || "",
-          kind: t.kind || "audio",
-          youtube_video_id: t.youtube_video_id,
-          duration: t.duration,
-        })) : (current ? [current] : []);
-        
-        if (seedTracks.length === 0) {
-          toast.error("No tracks available to start radio");
-          setSelectedStation(null);
-          return;
-        }
-        
-        // Shuffle the tracks for variety
-        const shuffled = [...seedTracks].sort(() => Math.random() - 0.5);
-        
-        // Play first track and start radio with shuffled list
-        p.play(shuffled[0], shuffled);
-        await startRadio(shuffled, user.email || user.id || "default");
+        // Use the player to play this track and start radio
+        p.play(track);
+        await startRadio([track], user.email || user.id || "default");
         notifySuccess(`Playing ${station.name}`);
+        return;
       }
+      
+      // For predefined stations or stations without YouTube, use all available tracks as seed
+      const seedTracks: Track[] = allTracks.length > 0 ? allTracks.map((t): Track => ({
+        id: `yt_${t.video_id}`,
+        title: t.title,
+        artist: t.channel || "Unknown",
+        cover: t.thumbnail || "",
+        audio: t.backup_url || "",
+        kind: t.backup_url ? "audio" : "youtube",
+        ytId: t.video_id,
+        duration: t.duration,
+      })) : (current ? [current] : []);
+      
+      if (seedTracks.length === 0) {
+        toast.error("No tracks available to start radio. Please add some songs first.");
+        setSelectedStation(null);
+        return;
+      }
+      
+      // Shuffle the tracks for variety
+      const shuffled = [...seedTracks].sort(() => Math.random() - 0.5);
+      
+      // Play first track and start radio with shuffled list
+      p.play(shuffled[0], shuffled);
+      await startRadio(shuffled, user.email || user.id || "default");
+      notifySuccess(`Playing ${station.name}`);
     } catch (error) {
       console.error("Failed to play station:", error);
       notifyError("Could not play radio station");
       setSelectedStation(null);
+    }
+  };
+
+  const handleCreateStation = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStation.name || !newStation.description) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    try {
+      await createStation({
+        data: {
+          name: newStation.name,
+          description: newStation.description,
+          youtubeUrl: newStation.youtube_url || undefined,
+          icon: newStation.icon,
+          color: newStation.color,
+          basedOn: newStation.based_on,
+          seedTrack: newStation.based_on === "song" ? current?.id || "" : undefined,
+          seedArtist: newStation.based_on === "artist" ? current?.artist || "" : undefined,
+          seedGenre: newStation.based_on === "genre" ? "pop" : undefined,
+        },
+      });
+      await queryClient.invalidateQueries({ queryKey: ["radio-stations"] });
+      toast.success("Radio station created successfully");
+      setShowCreateModal(false);
+      setNewStation({
+        name: "",
+        description: "",
+        youtube_url: "",
+        icon: "Radio",
+        color: "from-purple-500 to-pink-500",
+        based_on: "custom" as const,
+      });
+    } catch (error) {
+      toast.error("Failed to create radio station");
+    }
+  };
+
+  const handleDeleteStation = async (stationId: string) => {
+    if (!confirm("Are you sure you want to delete this radio station?")) return;
+    try {
+      await deleteStation({ data: { stationId } });
+      await queryClient.invalidateQueries({ queryKey: ["radio-stations"] });
+      toast.success("Radio station deleted");
+    } catch (error) {
+      toast.error("Failed to delete radio station");
     }
   };
 
@@ -224,22 +320,31 @@ export function RadioStations() {
       </section>
 
       {/* Custom Stations from Firestore */}
-      {customStations.length > 0 && (
-        <section>
-          <div className="flex items-center gap-2 mb-4">
+      <section>
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <h3 className="font-bold">Sonexa Radio</h3>
           </div>
-          {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading stations...</p>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {customStations.map((station) => (
+          {isAdmin && (
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background/50 px-3 py-1.5 text-xs font-semibold hover:bg-background transition"
+            >
+              <Plus className="h-3.5 w-3.5" /> Create Station
+            </button>
+          )}
+        </div>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading stations...</p>
+        ) : customStations.length > 0 ? (
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {customStations.map((station) => (
+              <div key={station.id} className="group relative aspect-square rounded-xl overflow-hidden bg-card/40 border border-border/30">
                 <button
-                  key={station.id}
                   onClick={() => playStation(station)}
                   disabled={selectedStation === station.id}
-                  className="group relative aspect-square rounded-xl overflow-hidden transition hover:scale-105 bg-card/40 border border-border/30 disabled:opacity-50 disabled:hover:scale-100"
+                  className="absolute inset-0 transition hover:scale-105 disabled:opacity-50 disabled:hover:scale-100"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-br ${station.color}`} />
                   <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition" />
@@ -256,10 +361,149 @@ export function RadioStations() {
                     )}
                   </div>
                 </button>
-              ))}
+                {isAdmin && (
+                  <button
+                    onClick={() => handleDeleteStation(station.id)}
+                    className="absolute top-2 right-2 p-1.5 rounded-full bg-black/40 hover:bg-red-500/80 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                    title="Delete station"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 border border-dashed border-border rounded-xl">
+            <Radio className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">No custom radio stations yet</p>
+            {isAdmin && (
+              <button
+                onClick={() => setShowCreateModal(true)}
+                className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-brand-gradient px-4 py-2 text-xs font-semibold text-background"
+              >
+                <Plus className="h-3.5 w-3.5" /> Create Your First Station
+              </button>
+            )}
+          </div>
+        )}
+      </section>
+
+      {/* Create Station Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-card border border-border rounded-2xl p-6 w-full max-w-md max-h-[90vh] overflow-y-auto animate-fade-up">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold">Create Radio Station</h3>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 rounded-lg hover:bg-background transition"
+              >
+                <X className="h-5 w-5" />
+              </button>
             </div>
-          )}
-        </section>
+            <form onSubmit={handleCreateStation} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">Station Name *</label>
+                <input
+                  type="text"
+                  value={newStation.name}
+                  onChange={(e) => setNewStation({ ...newStation, name: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2"
+                  placeholder="My Awesome Station"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Description *</label>
+                <input
+                  type="text"
+                  value={newStation.description}
+                  onChange={(e) => setNewStation({ ...newStation, description: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2"
+                  placeholder="Best songs for any mood"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">YouTube URL (optional)</label>
+                <input
+                  type="url"
+                  value={newStation.youtube_url}
+                  onChange={(e) => setNewStation({ ...newStation, youtube_url: e.target.value })}
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2"
+                  placeholder="https://www.youtube.com/watch?v=..."
+                />
+                <p className="text-xs text-muted-foreground mt-1">Leave empty for mixed radio mode</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">Based On</label>
+                <select
+                  value={newStation.based_on}
+                  onChange={(e) => setNewStation({ ...newStation, based_on: e.target.value as Station["based_on"] })}
+                  className="w-full rounded-lg border border-border bg-input px-3 py-2"
+                >
+                  {BASED_ON_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Icon</label>
+                <div className="grid grid-cols-5 gap-2">
+                  {ICON_OPTIONS.map((icon) => (
+                    <button
+                      key={icon}
+                      type="button"
+                      onClick={() => setNewStation({ ...newStation, icon })}
+                      className={`p-2 rounded-lg border transition ${
+                        newStation.icon === icon
+                          ? "border-primary bg-primary/15"
+                          : "border-border bg-background/50 hover:bg-background/80"
+                      }`}
+                    >
+                      {getIcon(icon)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2">Color Theme</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {COLOR_OPTIONS.map((color) => (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => setNewStation({ ...newStation, color })}
+                      className={`h-10 rounded-lg border-2 transition ${
+                        newStation.color === color
+                          ? "border-primary scale-105"
+                          : "border-border hover:border-primary/50"
+                      }`}
+                    >
+                      <div className={`h-full w-full rounded-md bg-gradient-to-br ${color}`} />
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowCreateModal(false)}
+                  className="flex-1 rounded-full border border-border bg-background/50 px-4 py-2.5 text-sm font-semibold hover:bg-background transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 rounded-full bg-brand-gradient px-4 py-2.5 text-sm font-semibold text-background shadow-glow transition hover:opacity-90"
+                >
+                  Create Station
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
     </div>
   );

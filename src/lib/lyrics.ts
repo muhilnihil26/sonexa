@@ -44,26 +44,41 @@ function parseSynced(lrc: string): LyricLine[] {
 async function fetchFromLrclib(title: string, artist: string): Promise<LyricsResult | null> {
   try {
     const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(title)}&artist_name=${encodeURIComponent(artist)}`;
-    const res = await fetch(url, { 
-      signal: AbortSignal.timeout(8000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    
+    try {
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (res.status === 404) return null; // Not found, try next source
+      if (!res.ok) {
+        console.warn(`lrclib HTTP ${res.status} for "${title}" by "${artist}"`);
+        return null;
       }
-    });
-    
-    if (res.status === 404) return null; // Not found, try next source
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    
-    const json = await res.json() as { syncedLyrics?: string | null; plainLyrics?: string | null };
-    const synced = json.syncedLyrics ? parseSynced(json.syncedLyrics) : null;
-    const plain = json.plainLyrics ?? (synced ? synced.map((l) => l.text).join("\n") : "");
-    
-    if (synced?.length || plain.trim()) {
-      return { status: "found", synced, plain };
+      
+      const json = await res.json() as { syncedLyrics?: string | null; plainLyrics?: string | null };
+      const synced = json.syncedLyrics ? parseSynced(json.syncedLyrics) : null;
+      const plain = json.plainLyrics ?? (synced ? synced.map((l) => l.text).join("\n") : "");
+      
+      if (synced?.length || plain.trim()) {
+        return { status: "found", synced, plain };
+      }
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return null;
   } catch (e) {
-    console.error("lrclib error:", e);
+    if (e instanceof Error && e.name === 'AbortError') {
+      console.warn(`lrclib timeout for "${title}" by "${artist}"`);
+    } else {
+      console.error("lrclib error:", e);
+    }
     return null;
   }
 }
@@ -83,31 +98,51 @@ async function fetchFromSearch(title: string, artist: string): Promise<LyricsRes
     ];
 
     for (const query of queries) {
-      const url = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
-      const res = await fetch(url, { 
-        signal: AbortSignal.timeout(8000),
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      });
-      
-      if (!res.ok) continue;
-      
-      const results = await res.json() as Array<{ id: number; title: string; artist: string; syncedLyrics?: string | null; plainLyrics?: string | null }>;
-      
-      if (results.length > 0) {
-        // Find best match by similarity
-        const best = results.find(r => 
-          r.title.toLowerCase().includes(normalTitle) || 
-          normalTitle.includes(r.title.toLowerCase())
-        ) || results[0];
+      try {
+        const url = `https://lrclib.net/api/search?q=${encodeURIComponent(query)}`;
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         
-        const synced = best.syncedLyrics ? parseSynced(best.syncedLyrics) : null;
-        const plain = best.plainLyrics ?? (synced ? synced.map((l) => l.text).join("\n") : "");
-        
-        if (synced?.length || plain.trim()) {
-          return { status: "found", synced, plain };
+        try {
+          const res = await fetch(url, { 
+            signal: controller.signal,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+              'Accept': 'application/json',
+            }
+          });
+          
+          if (!res.ok) {
+            console.warn(`lrclib search HTTP ${res.status} for query: "${query}"`);
+            continue;
+          }
+          
+          const results = await res.json() as Array<{ id: number; title: string; artist: string; syncedLyrics?: string | null; plainLyrics?: string | null }>;
+          
+          if (results.length > 0) {
+            // Find best match by similarity
+            const best = results.find(r => 
+              r.title.toLowerCase().includes(normalTitle) || 
+              normalTitle.includes(r.title.toLowerCase())
+            ) || results[0];
+            
+            const synced = best.syncedLyrics ? parseSynced(best.syncedLyrics) : null;
+            const plain = best.plainLyrics ?? (synced ? synced.map((l) => l.text).join("\n") : "");
+            
+            if (synced?.length || plain.trim()) {
+              return { status: "found", synced, plain };
+            }
+          }
+        } finally {
+          clearTimeout(timeoutId);
         }
+      } catch (e) {
+        if (e instanceof Error && e.name === 'AbortError') {
+          console.warn(`lrclib search timeout for query: "${query}"`);
+        } else {
+          console.error(`search error for query "${query}":`, e);
+        }
+        continue;
       }
     }
     return null;
@@ -119,28 +154,41 @@ async function fetchFromSearch(title: string, artist: string): Promise<LyricsRes
 
 async function fetchFromGenius(title: string, artist: string): Promise<LyricsResult | null> {
   try {
-    // Use Genius API as fallback (requires API key, but we can try public search)
-    // For now, we'll use a simpler approach - search via a lyrics API
-    const query = encodeURIComponent(`${title} ${artist}`);
-    const url = `https://api.lyrics.ovh/v1/${artist}/${title}`;
+    // Use lyrics.ovh API as fallback
+    const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const res = await fetch(url, { 
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    try {
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (!res.ok) {
+        console.warn(`lyrics.ovh HTTP ${res.status} for "${title}" by "${artist}"`);
+        return null;
       }
-    });
-    
-    if (!res.ok) return null;
-    
-    const plain = await res.text();
-    
-    if (plain && plain.trim() && !plain.includes("Lyrics not found")) {
-      return { status: "found", synced: null, plain };
+      
+      const data = await res.json() as { lyrics?: string };
+      const plain = data.lyrics;
+      
+      if (plain && plain.trim() && !plain.includes("Lyrics not found")) {
+        return { status: "found", synced: null, plain };
+      }
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return null;
   } catch (e) {
-    console.error("genius/lyrics.ovh error:", e);
+    if (e instanceof Error && e.name === 'AbortError') {
+      console.warn(`lyrics.ovh timeout for "${title}" by "${artist}"`);
+    } else {
+      console.error("lyrics.ovh error:", e);
+    }
     return null;
   }
 }
@@ -148,33 +196,45 @@ async function fetchFromGenius(title: string, artist: string): Promise<LyricsRes
 async function fetchFromChartLyrics(title: string, artist: string): Promise<LyricsResult | null> {
   try {
     // ChartLyrics API - free lyrics source
-    const query = encodeURIComponent(`${title} ${artist}`);
     const url = `https://api.chartlyrics.com/apiv1.asmx/SearchLyricDirect?artist=${encodeURIComponent(artist)}&song=${encodeURIComponent(title)}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const res = await fetch(url, { 
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    try {
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+        }
+      });
+      
+      if (!res.ok) {
+        console.warn(`chartlyrics HTTP ${res.status} for "${title}" by "${artist}"`);
+        return null;
       }
-    });
-    
-    if (!res.ok) return null;
-    
-    const text = await res.text();
-    
-    // Parse XML response
-    if (text && text.includes("<Lyric>") && !text.includes("<Lyric />")) {
-      const match = text.match(/<Lyric>(.*?)<\/Lyric>/s);
-      if (match && match[1].trim()) {
-        const plain = match[1].trim();
-        if (plain && !plain.toLowerCase().includes("lyrics not found")) {
-          return { status: "found", synced: null, plain };
+      
+      const text = await res.text();
+      
+      // Parse XML response
+      if (text && text.includes("<Lyric>") && !text.includes("<Lyric />")) {
+        const match = text.match(/<Lyric>(.*?)<\/Lyric>/s);
+        if (match && match[1].trim()) {
+          const plain = match[1].trim();
+          if (plain && !plain.toLowerCase().includes("lyrics not found")) {
+            return { status: "found", synced: null, plain };
+          }
         }
       }
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return null;
   } catch (e) {
-    console.error("chartlyrics error:", e);
+    if (e instanceof Error && e.name === 'AbortError') {
+      console.warn(`chartlyrics timeout for "${title}" by "${artist}"`);
+    } else {
+      console.error("chartlyrics error:", e);
+    }
     return null;
   }
 }
@@ -182,26 +242,39 @@ async function fetchFromChartLyrics(title: string, artist: string): Promise<Lyri
 async function fetchFromLyricsify(title: string, artist: string): Promise<LyricsResult | null> {
   try {
     // Lyricsify API - another free source
-    const query = encodeURIComponent(`${title} ${artist}`);
-    const url = `https://lyricsify.com/api/search?q=${query}`;
+    const url = `https://lyricsify.com/api/search?q=${encodeURIComponent(`${title} ${artist}`)}`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const res = await fetch(url, { 
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    try {
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (!res.ok) {
+        console.warn(`lyricsify HTTP ${res.status} for "${title}" by "${artist}"`);
+        return null;
       }
-    });
-    
-    if (!res.ok) return null;
-    
-    const data = await res.json() as { lyrics?: string };
-    
-    if (data.lyrics && data.lyrics.trim() && !data.lyrics.toLowerCase().includes("lyrics not found")) {
-      return { status: "found", synced: null, plain: data.lyrics };
+      
+      const data = await res.json() as { lyrics?: string };
+      
+      if (data.lyrics && data.lyrics.trim() && !data.lyrics.toLowerCase().includes("lyrics not found")) {
+        return { status: "found", synced: null, plain: data.lyrics };
+      }
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return null;
   } catch (e) {
-    console.error("lyricsify error:", e);
+    if (e instanceof Error && e.name === 'AbortError') {
+      console.warn(`lyricsify timeout for "${title}" by "${artist}"`);
+    } else {
+      console.error("lyricsify error:", e);
+    }
     return null;
   }
 }
@@ -209,26 +282,44 @@ async function fetchFromLyricsify(title: string, artist: string): Promise<Lyrics
 async function fetchFromVagalume(title: string, artist: string): Promise<LyricsResult | null> {
   try {
     // Vagalume API - Brazilian lyrics service
-    const query = encodeURIComponent(`${title} ${artist}`);
     const url = `https://api.vagalume.com.br/search.php?art=${encodeURIComponent(artist)}&mus=${encodeURIComponent(title)}&apikey=660a4395aee69fd836a644f058b9b18f`;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     
-    const res = await fetch(url, { 
-      signal: AbortSignal.timeout(5000),
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+    try {
+      const res = await fetch(url, { 
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Accept': 'application/json',
+        }
+      });
+      
+      if (!res.ok) {
+        console.warn(`vagalume HTTP ${res.status} for "${title}" by "${artist}"`);
+        return null;
       }
-    });
-    
-    if (!res.ok) return null;
-    
-    const data = await res.json() as { mus?: { 0?: { text?: string } } };
-    
-    if (data.mus?.[0]?.text && data.mus[0].text.trim()) {
-      return { status: "found", synced: null, plain: data.mus[0].text };
+      
+      const data = await res.json() as { mus?: { 0?: { text?: string } }; error?: boolean };
+      
+      if (data.error) {
+        console.warn(`vagalume error for "${title}" by "${artist}"`);
+        return null;
+      }
+      
+      if (data.mus?.[0]?.text && data.mus[0].text.trim()) {
+        return { status: "found", synced: null, plain: data.mus[0].text };
+      }
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
     }
-    return null;
   } catch (e) {
-    console.error("vagalume error:", e);
+    if (e instanceof Error && e.name === 'AbortError') {
+      console.warn(`vagalume timeout for "${title}" by "${artist}"`);
+    } else {
+      console.error("vagalume error:", e);
+    }
     return null;
   }
 }

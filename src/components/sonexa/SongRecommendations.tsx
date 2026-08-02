@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { listAdminYouTubeTracks } from "@/lib/api/youtube.functions";
-import { usePlayer } from "@/lib/player-store";
+import { type Track, usePlayer } from "@/lib/player-store";
 import { Play, Heart, Plus } from "lucide-react";
 import { useLocalLibrary } from "@/lib/local-library";
 import { toast } from "sonner";
@@ -24,14 +24,22 @@ export function SongRecommendations({ currentTrackId, limit = 6 }: SongRecommend
     enabled: !!currentTrackId,
   });
 
-  const tracks = data?.tracks || [];
+  const tracks: Track[] = (data?.tracks ?? []).map((track) => ({
+    id: `yt_${track.video_id}`,
+    title: track.title,
+    artist: track.channel,
+    cover: track.thumbnail,
+    audio: track.backup_url ?? "",
+    kind: track.backup_url ? "audio" : "youtube",
+    ytId: track.video_id,
+  }));
   
   // Filter out current track and get recommendations based on language/artist
   const recommendations = tracks
-    .filter((t: any) => t.id !== currentTrackId)
+    .filter((t) => t.id !== currentTrackId)
     .slice(0, limit);
 
-  const handlePlay = async (track: any) => {
+  const handlePlay = async (track: Track) => {
     setLoadingId(track.id);
     try {
       play(track, recommendations);
@@ -40,13 +48,13 @@ export function SongRecommendations({ currentTrackId, limit = 6 }: SongRecommend
     }
   };
 
-  const handleLike = (e: React.MouseEvent, track: any) => {
+  const handleLike = (e: React.MouseEvent, track: Track) => {
     e.stopPropagation();
     toggleLike(track);
     toast.success(isLiked(track.id) ? "Removed from Liked" : "Added to Liked");
   };
 
-  const handleAddToQueue = (e: React.MouseEvent, track: any) => {
+  const handleAddToQueue = (e: React.MouseEvent, track: Track) => {
     e.stopPropagation();
     addToQueue(track);
     toast.success("Added to queue");
@@ -78,7 +86,7 @@ export function SongRecommendations({ currentTrackId, limit = 6 }: SongRecommend
     <div className="space-y-4">
       <h3 className="text-lg font-bold">Recommended for you</h3>
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
-        {recommendations.map((track: any) => (
+        {recommendations.map((track) => (
           <div
             key={track.id}
             className="group relative cursor-pointer"
@@ -86,7 +94,7 @@ export function SongRecommendations({ currentTrackId, limit = 6 }: SongRecommend
           >
             <div className="relative aspect-square rounded-xl overflow-hidden">
               <img
-                src={track.thumbnail}
+                src={track.cover}
                 alt={track.title}
                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
               />
@@ -102,7 +110,7 @@ export function SongRecommendations({ currentTrackId, limit = 6 }: SongRecommend
             </div>
             <div className="mt-2">
               <p className="text-sm font-medium truncate">{track.title}</p>
-              <p className="text-xs text-muted-foreground truncate">{track.channel}</p>
+              <p className="text-xs text-muted-foreground truncate">{track.artist}</p>
             </div>
             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity flex gap-1">
               <button

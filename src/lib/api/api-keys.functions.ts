@@ -78,7 +78,7 @@ export const adminListApiKeys = createServerFn({ method: "GET" })
 
 export const adminCreateApiKey = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ name: z.string().min(1).max(80) }))
+  .validator(z.object({ name: z.string().min(1).max(80) }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const key = createPlainKey();
@@ -102,7 +102,7 @@ export const adminCreateApiKey = createServerFn({ method: "POST" })
 
 export const adminRevokeApiKey = createServerFn({ method: "POST" })
   .middleware([requireFirebaseAuth])
-  .inputValidator(z.object({ id: z.string().min(8).max(120) }))
+  .validator(z.object({ id: z.string().min(8).max(120) }))
   .handler(async ({ data, context }) => {
     await assertAdmin(context);
     const existing = await getFirestoreDoc<Omit<ApiKeyRow, "id">>(

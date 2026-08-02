@@ -21,6 +21,18 @@ import {
   Pause,
   Play,
   RefreshCw,
+  BarChart3,
+  Users,
+  Settings,
+  LayoutGrid,
+  Activity,
+  Zap,
+  Globe,
+  Database,
+  Clock,
+  TrendingUp,
+  Radio,
+  Music2,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -48,6 +60,7 @@ import {
   adminRemoveYouTubeTrack,
   adminReviewYouTubeRequest,
   listAdminYouTubeTracks,
+  listAdminYouTubePlaylists,
   lookupYouTube,
   searchYouTube,
   adminStartBulkDownload,
@@ -70,6 +83,17 @@ import {
   getHomeConfig,
   adminSetHomeConfig,
 } from "@/lib/api/social.functions";
+import {
+  getAllSchedulesStatus,
+  getSyncHistory,
+} from "@/lib/api/scheduler.functions";
+import {
+  getUserCloudLibrary,
+  createCloudUploadUrls,
+  addCloudTrack,
+  deleteCloudTrack,
+  getCloudTrackUrl,
+} from "@/lib/api/cloud-library.functions";
 import {
   adminCreateApiKey,
   adminListApiKeys,
@@ -103,6 +127,7 @@ function Admin() {
   const [audio, setAudio] = useState<File | null>(null);
   const [cover, setCover] = useState<File | null>(null);
   const [busy, setBusy] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   if (loading) {
     return (
@@ -175,109 +200,579 @@ function Admin() {
   }
 
   return (
-    <div className="p-6 md:p-10 max-w-2xl">
-      <h1 className="text-3xl font-bold flex items-center gap-3">
-        <Shield className="h-7 w-7 text-primary" /> Admin / Upload
-      </h1>
-      <p className="text-sm text-muted-foreground mt-2">
-        Add owned audio files, approve YouTube songs, and manage the shared catalog.
-      </p>
-
-      <form onSubmit={submit} className="mt-8 space-y-4">
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Song title"
-          className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 ring-primary"
-        />
-        <input
-          value={artist}
-          onChange={(e) => setArtist(e.target.value)}
-          placeholder="Artist name"
-          className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 ring-primary"
-        />
-        <label className="block">
-          <span className="text-sm text-muted-foreground">Audio file</span>
-          <input
-            type="file"
-            accept="audio/*"
-            onChange={(e) => setAudio(e.target.files?.[0] ?? null)}
-            className="mt-1 w-full text-sm"
-          />
-        </label>
-        <label className="block">
-          <span className="text-sm text-muted-foreground">Cover image</span>
-          <input
-            type="file"
-            accept="image/*"
-            onChange={(e) => setCover(e.target.files?.[0] ?? null)}
-            className="mt-1 w-full text-sm"
-          />
-        </label>
-        <button
-          disabled={busy}
-          type="submit"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-gradient text-background font-semibold shadow-glow disabled:opacity-60"
-        >
-          {busy ? (
-            "Uploading..."
-          ) : (
-            <>
-              <Upload className="h-4 w-4" /> Upload song
-            </>
-          )}
-        </button>
-      </form>
-
-      <div className="mt-8 p-5 rounded-xl border border-border bg-card/40">
-        <div className="flex items-center gap-2 text-sm font-semibold">
-          <Sparkles className="h-4 w-4 text-primary" /> Seed catalog (iTunes legal previews)
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Pulls Tamil tracks from the public iTunes Search API with preview audio, cover art, artist
-          and album metadata.
+    <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto animate-fade-up">
+      <div className="mb-6 md:mb-8">
+        <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold flex items-center gap-3">
+          <Shield className="h-6 w-6 md:h-7 md:w-7 text-primary" /> Admin Dashboard
+        </h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-2">
+          Manage your Sonexa music platform - songs, YouTube content, features, and settings.
         </p>
-        <div className="mt-3 flex flex-col sm:flex-row gap-2">
-          <input
-            value={seedQ}
-            onChange={(e) => setSeedQ(e.target.value)}
-            placeholder="Optional extra query"
-            className="flex-1 px-3 py-2 rounded-lg bg-input border border-border text-sm"
-          />
-          <button
-            onClick={async () => {
-              setSeeding(true);
-              try {
-                const r = await seed({ data: seedQ ? { extraQuery: seedQ } : {} });
-                toast.success(
-                  `Seeded ${r.inserted} songs / ${r.artistsCreated} artists / ${r.albumsCreated} albums`,
-                );
-              } catch (err) {
-                toast.error(err instanceof Error ? err.message : "Seed failed");
-              } finally {
-                setSeeding(false);
-              }
-            }}
-            disabled={seeding}
-            className="px-5 py-2 rounded-lg bg-brand-gradient text-background font-semibold shadow-glow disabled:opacity-60"
-          >
-            {seeding ? "Seeding..." : "Seed Tamil catalog"}
-          </button>
+      </div>
+
+      {/* Tab Navigation */}
+      <div className="flex flex-wrap gap-2 mb-6 md:mb-8">
+        {[
+          { id: 'overview', label: 'Overview', icon: LayoutGrid },
+          { id: 'upload', label: 'Upload', icon: Upload },
+          { id: 'cloud', label: 'Cloud Library', icon: Database },
+          { id: 'youtube', label: 'YouTube', icon: Youtube },
+          { id: 'radio', label: 'Radio', icon: Radio },
+          { id: 'playlists', label: 'Playlists', icon: LayoutGrid },
+          { id: 'features', label: 'Features', icon: Settings },
+          { id: 'api', label: 'API Keys', icon: KeyRound },
+          { id: 'songs', label: 'Songs', icon: Music2 },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`flex items-center gap-2 px-3 py-2 md:px-4 md:py-2.5 rounded-lg text-sm font-medium transition-all duration-200 touch-manipulation ${
+                activeTab === tab.id
+                  ? 'bg-brand-gradient text-background shadow-glow scale-105'
+                  : 'bg-background/40 text-muted-foreground hover:bg-background/60 hover:text-foreground'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Tab Content */}
+      <div className="animate-fade-up">
+        {activeTab === 'overview' && <AdminOverview />}
+        {activeTab === 'cloud' && <CloudLibraryManager />}
+        {activeTab === 'upload' && (
+          <div className="space-y-6">
+            <form onSubmit={submit} className="p-5 rounded-xl border border-border bg-card/40 space-y-4">
+              <h2 className="text-lg font-semibold flex items-center gap-2">
+                <Upload className="h-5 w-5 text-primary" /> Upload Song
+              </h2>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Song title"
+                className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 ring-primary touch-manipulation"
+              />
+              <input
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+                placeholder="Artist name"
+                className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 ring-primary touch-manipulation"
+              />
+              <label className="block">
+                <span className="text-sm text-muted-foreground">Audio file</span>
+                <input
+                  type="file"
+                  accept="audio/*"
+                  onChange={(e) => setAudio(e.target.files?.[0] ?? null)}
+                  className="mt-1 w-full text-sm touch-manipulation"
+                />
+              </label>
+              <label className="block">
+                <span className="text-sm text-muted-foreground">Cover image</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+                  className="mt-1 w-full text-sm touch-manipulation"
+                />
+              </label>
+              <button
+                disabled={busy}
+                type="submit"
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-gradient text-background font-semibold shadow-glow disabled:opacity-60 touch-manipulation min-h-[44px]"
+              >
+                {busy ? (
+                  "Uploading..."
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4" /> Upload song
+                  </>
+                )}
+              </button>
+            </form>
+
+            <div className="p-5 rounded-xl border border-border bg-card/40">
+              <div className="flex items-center gap-2 text-sm font-semibold">
+                <Sparkles className="h-4 w-4 text-primary" /> Seed catalog (iTunes legal previews)
+              </div>
+              <p className="mt-2 text-xs text-muted-foreground">
+                Pulls Tamil tracks from the public iTunes Search API with preview audio, cover art, artist
+                and album metadata.
+              </p>
+              <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                <input
+                  value={seedQ}
+                  onChange={(e) => setSeedQ(e.target.value)}
+                  placeholder="Optional extra query"
+                  className="flex-1 px-3 py-2 rounded-lg bg-input border border-border text-sm touch-manipulation"
+                />
+                <button
+                  onClick={async () => {
+                    setSeeding(true);
+                    try {
+                      const r = await seed({ data: seedQ ? { extraQuery: seedQ } : {} });
+                      toast.success(
+                        `Seeded ${r.inserted} songs / ${r.artistsCreated} artists / ${r.albumsCreated} albums`,
+                      );
+                    } catch (err) {
+                      toast.error(err instanceof Error ? err.message : "Seed failed");
+                    } finally {
+                      setSeeding(false);
+                    }
+                  }}
+                  disabled={seeding}
+                  className="px-5 py-2 rounded-lg bg-brand-gradient text-background font-semibold shadow-glow disabled:opacity-60 touch-manipulation min-h-[44px]"
+                >
+                  {seeding ? "Seeding..." : "Seed Tamil catalog"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'youtube' && <YouTubeAdder />}
+        {activeTab === 'radio' && <RadioStationManager />}
+        {activeTab === 'playlists' && <PlaylistManager />}
+        {activeTab === 'features' && (
+          <div className="space-y-6">
+            <FeatureConfigManager />
+            <HomeConfigManager />
+            <IntroConfigManager />
+          </div>
+        )}
+        {activeTab === 'api' && <ApiKeyManager />}
+        {activeTab === 'songs' && (
+          <div className="space-y-6">
+            <ManageSongs />
+            <YouTubeRequests />
+            <DownloadScheduler />
+            <DiscoveryScheduler />
+            <SamplePlaylistImporter />
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AdminOverview() {
+  const listAdmin = useServerFn(adminListSongs);
+  const listTracks = useServerFn(listAdminYouTubeTracks);
+  const listStations = useServerFn(listRadioStations);
+  const listPlaylists = useServerFn(listAdminYouTubePlaylists);
+  const getSchedulesStatus = useServerFn(getAllSchedulesStatus);
+  const getHistory = useServerFn(getSyncHistory);
+  
+  const { data: songsData } = useQuery({ queryKey: ["admin-songs-overview"], queryFn: () => listAdmin() });
+  const { data: youtubeData } = useQuery({ queryKey: ["admin-youtube-overview"], queryFn: () => listTracks() });
+  const { data: stationsData } = useQuery({ queryKey: ["admin-stations-overview"], queryFn: () => listStations() });
+  const { data: playlistsData } = useQuery({ queryKey: ["admin-playlists-overview"], queryFn: () => listPlaylists() });
+  const { data: schedulesStatus } = useQuery({ queryKey: ["schedules-status"], queryFn: () => getSchedulesStatus() });
+  const { data: syncHistory } = useQuery({ queryKey: ["sync-history"], queryFn: () => getHistory() });
+
+  const songsCount = songsData?.songs?.length || 0;
+  const youtubeCount = youtubeData?.tracks?.length || 0;
+  const stationsCount = stationsData?.stations?.length || 0;
+  const playlistsCount = playlistsData?.playlists?.length || 0;
+
+  const stats = [
+    { label: 'Total Songs', value: songsCount, icon: Music2, color: 'from-purple-500 to-pink-500' },
+    { label: 'YouTube Tracks', value: youtubeCount, icon: Youtube, color: 'from-red-500 to-orange-500' },
+    { label: 'Radio Stations', value: stationsCount, icon: Radio, color: 'from-green-500 to-teal-500' },
+    { label: 'Playlists', value: playlistsCount, icon: LayoutGrid, color: 'from-blue-500 to-indigo-500' },
+  ];
+
+  const formatTime = (isoString?: string) => {
+    if (!isoString) return 'Never';
+    const date = new Date(isoString);
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+    
+    if (diffMins < 1) return 'Just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    if (diffHours < 24) return `${diffHours}h ago`;
+    return `${diffDays}d ago`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat, index) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className="p-5 rounded-xl border border-border bg-card/40 backdrop-blur-sm hover:scale-105 transition-transform duration-200 animate-fade-up"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
+              <div className={`h-12 w-12 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center text-white mb-3 shadow-lg`}>
+                <Icon className="h-6 w-6" />
+              </div>
+              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="text-sm text-muted-foreground">{stat.label}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Sync Status Section */}
+      <div className="p-5 rounded-xl border border-border bg-card/40">
+        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <Activity className="h-5 w-5 text-primary" /> Sync Status
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Download Schedule Status */}
+          <div className="p-4 rounded-lg bg-background/40 border border-border/50">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Download className="h-4 w-4 text-blue-400" />
+                <span className="font-medium">Download Schedule</span>
+              </div>
+              {schedulesStatus?.download?.enabled ? (
+                <span className="flex items-center gap-1 text-xs text-green-400">
+                  <Check className="h-3 w-3" /> Enabled
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Ban className="h-3 w-3" /> Disabled
+                </span>
+              )}
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Last run:</span>
+                <span>{formatTime(schedulesStatus?.download?.lastRunAt)}</span>
+              </div>
+              {schedulesStatus?.download?.errorCount && schedulesStatus.download.errorCount > 0 && (
+                <div className="flex justify-between text-red-400">
+                  <span>Errors:</span>
+                  <span>{schedulesStatus.download.errorCount}</span>
+                </div>
+              )}
+              {schedulesStatus?.download?.lastError && (
+                <div className="text-xs text-red-400 truncate" title={schedulesStatus.download.lastError}>
+                  {schedulesStatus.download.lastError}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Discovery Schedule Status */}
+          <div className="p-4 rounded-lg bg-background/40 border border-border/50">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-400" />
+                <span className="font-medium">Discovery Schedule</span>
+              </div>
+              {schedulesStatus?.discovery?.enabled ? (
+                <span className="flex items-center gap-1 text-xs text-green-400">
+                  <Check className="h-3 w-3" /> Enabled
+                </span>
+              ) : (
+                <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Ban className="h-3 w-3" /> Disabled
+                </span>
+              )}
+            </div>
+            <div className="space-y-1 text-sm">
+              <div className="flex justify-between text-muted-foreground">
+                <span>Last run:</span>
+                <span>{formatTime(schedulesStatus?.discovery?.lastRunAt)}</span>
+              </div>
+              {schedulesStatus?.discovery?.errorCount && schedulesStatus.discovery.errorCount > 0 && (
+                <div className="flex justify-between text-red-400">
+                  <span>Errors:</span>
+                  <span>{schedulesStatus.discovery.errorCount}</span>
+                </div>
+              )}
+              {schedulesStatus?.discovery?.lastError && (
+                <div className="text-xs text-red-400 truncate" title={schedulesStatus.discovery.lastError}>
+                  {schedulesStatus.discovery.lastError}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
-      <ApiKeyManager />
-      <YouTubeAdder />
-      <PlaylistManager />
-      <RadioStationManager />
-      <DownloadScheduler />
-      <DiscoveryScheduler />
-      <SamplePlaylistImporter />
-      <FeatureConfigManager />
-      <HomeConfigManager />
-      <IntroConfigManager />
-      <YouTubeRequests />
-      <ManageSongs />
+      {/* Sync History */}
+      {syncHistory?.history && syncHistory.history.length > 0 && (
+        <div className="p-5 rounded-xl border border-border bg-card/40">
+          <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <Clock className="h-5 w-5 text-primary" /> Sync History
+          </h3>
+          <div className="space-y-2 max-h-64 overflow-y-auto">
+            {syncHistory.history.slice(0, 10).map((entry: any, idx: number) => (
+              <div
+                key={idx}
+                className={`p-3 rounded-lg border ${
+                  entry.status === 'success'
+                    ? 'border-green-500/20 bg-green-500/5'
+                    : 'border-red-500/20 bg-red-500/5'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <div className="flex items-center gap-2">
+                    {entry.status === 'success' ? (
+                      <Check className="h-4 w-4 text-green-400" />
+                    ) : (
+                      <AlertTriangle className="h-4 w-4 text-red-400" />
+                    )}
+                    <span className="font-medium capitalize">{entry.type}</span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">{formatTime(entry.timestamp)}</span>
+                </div>
+                <div className="text-sm text-muted-foreground">{entry.message}</div>
+                {entry.itemCount && (
+                  <div className="text-xs text-muted-foreground">{entry.itemCount} items processed</div>
+                )}
+                {entry.error && (
+                  <div className="text-xs text-red-400 mt-1">{entry.error}</div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function CloudLibraryManager() {
+  const qc = useQueryClient();
+  const getLibrary = useServerFn(getUserCloudLibrary);
+  const createUploadUrls = useServerFn(createCloudUploadUrls);
+  const addTrack = useServerFn(addCloudTrack);
+  const deleteTrack = useServerFn(deleteCloudTrack);
+  const { data: libraryData, isLoading } = useQuery({
+    queryKey: ["cloud-library"],
+    queryFn: () => getLibrary(),
+  });
+  const [title, setTitle] = useState("");
+  const [artist, setArtist] = useState("");
+  const [album, setAlbum] = useState("");
+  const [audio, setAudio] = useState<File | null>(null);
+  const [cover, setCover] = useState<File | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [uploadUrls, setUploadUrls] = useState<any>(null);
+
+  const onUpload = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!audio || !title || !artist) return toast.error("Please fill all required fields");
+    setBusy(true);
+    try {
+      const urls = await createUploadUrls({
+        data: {
+          audioName: audio.name,
+          audioSize: audio.size,
+          audioMimeType: audio.type,
+          coverName: cover?.name,
+        },
+      });
+      setUploadUrls(urls);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to get upload URLs");
+      setBusy(false);
+    }
+  };
+
+  const onUploadFiles = async () => {
+    if (!uploadUrls || !audio) return;
+    setBusy(true);
+    try {
+      const { error: audioError } = await supabase.storage
+        .from("cloud-audio")
+        .uploadToSignedUrl(uploadUrls.audio.path, uploadUrls.audio.token, audio);
+      if (audioError) throw audioError;
+
+      if (cover && uploadUrls.cover) {
+        const { error: coverError } = await supabase.storage
+          .from("cloud-covers")
+          .uploadToSignedUrl(uploadUrls.cover.path, uploadUrls.cover.token, cover);
+        if (coverError) throw coverError;
+      }
+
+      await addTrack({
+        data: {
+          title,
+          artist,
+          album: album || undefined,
+          audioPath: uploadUrls.audio.path,
+          coverPath: uploadUrls.cover?.path || undefined,
+          fileSize: audio.size,
+          mimeType: audio.type,
+        },
+      });
+
+      toast.success("Track added to cloud library");
+      setTitle("");
+      setArtist("");
+      setAlbum("");
+      setAudio(null);
+      setCover(null);
+      setUploadUrls(null);
+      await qc.invalidateQueries({ queryKey: ["cloud-library"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Upload failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onDelete = async (trackId: string) => {
+    if (!confirm("Delete this track from cloud library?")) return;
+    setBusy(true);
+    try {
+      await deleteTrack({ data: { trackId } });
+      toast.success("Track deleted");
+      await qc.invalidateQueries({ queryKey: ["cloud-library"] });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const formatSize = (bytes: number) => {
+    const mb = bytes / 1024 / 1024;
+    return mb < 1 ? `${(bytes / 1024).toFixed(1)} KB` : `${mb.toFixed(1)} MB`;
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Storage Info */}
+      <div className="p-5 rounded-xl border border-border bg-card/40">
+        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <Database className="h-5 w-5 text-primary" /> Cloud Storage
+        </h3>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Storage Used:</span>
+            <span className="font-medium">{libraryData?.storageUsed || 0} MB / {libraryData?.storageLimit || 500} MB</span>
+          </div>
+          <div className="h-2 bg-border rounded-full overflow-hidden">
+            <div
+              className="h-full bg-brand-gradient transition-all duration-300"
+              style={{
+                width: `${((libraryData?.storageUsed || 0) / (libraryData?.storageLimit || 500)) * 100}%`,
+              }}
+            />
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {libraryData?.library?.tracks.length || 0} tracks in library
+          </div>
+        </div>
+      </div>
+
+      {/* Upload Form */}
+      <div className="p-5 rounded-xl border border-border bg-card/40">
+        <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+          <Upload className="h-5 w-5 text-primary" /> Upload to Cloud
+        </h3>
+        {!uploadUrls ? (
+          <form onSubmit={onUpload} className="space-y-4">
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              placeholder="Song title *"
+              className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 ring-primary"
+            />
+            <input
+              value={artist}
+              onChange={(e) => setArtist(e.target.value)}
+              placeholder="Artist name *"
+              className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 ring-primary"
+            />
+            <input
+              value={album}
+              onChange={(e) => setAlbum(e.target.value)}
+              placeholder="Album (optional)"
+              className="w-full px-4 py-3 rounded-lg bg-input border border-border focus:outline-none focus:ring-2 ring-primary"
+            />
+            <label className="block">
+              <span className="text-sm text-muted-foreground">Audio file *</span>
+              <input
+                type="file"
+                accept="audio/*"
+                onChange={(e) => setAudio(e.target.files?.[0] ?? null)}
+                className="mt-1 w-full text-sm"
+              />
+            </label>
+            <label className="block">
+              <span className="text-sm text-muted-foreground">Cover image (optional)</span>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => setCover(e.target.files?.[0] ?? null)}
+                className="mt-1 w-full text-sm"
+              />
+            </label>
+            <button
+              disabled={busy}
+              type="submit"
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-gradient text-background font-semibold shadow-glow disabled:opacity-60"
+            >
+              {busy ? "Getting upload URLs..." : "Upload"}
+            </button>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">Upload URLs generated. Uploading files...</p>
+            <button
+              disabled={busy}
+              onClick={onUploadFiles}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-lg bg-brand-gradient text-background font-semibold shadow-glow disabled:opacity-60"
+            >
+              {busy ? "Uploading..." : "Confirm Upload"}
+            </button>
+            <button
+              disabled={busy}
+              onClick={() => setUploadUrls(null)}
+              className="px-4 py-2 rounded-lg border border-border text-muted-foreground hover:bg-background/60"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Track List */}
+      {libraryData?.library?.tracks && libraryData.library.tracks.length > 0 && (
+        <div className="p-5 rounded-xl border border-border bg-card/40">
+          <h3 className="text-lg font-semibold flex items-center gap-2 mb-4">
+            <Music2 className="h-5 w-5 text-primary" /> Your Tracks
+          </h3>
+          <div className="space-y-2">
+            {libraryData.library.tracks.map((track: any) => (
+              <div
+                key={track.id}
+                className="flex items-center justify-between p-3 rounded-lg bg-background/40 border border-border/50"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{track.title}</div>
+                  <div className="text-sm text-muted-foreground truncate">{track.artist}</div>
+                  <div className="text-xs text-muted-foreground">{formatSize(track.fileSize)}</div>
+                </div>
+                <button
+                  disabled={busy}
+                  onClick={() => onDelete(track.id)}
+                  className="ml-3 p-2 rounded-lg text-red-400 hover:bg-red-500/10 disabled:opacity-60"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -330,7 +825,7 @@ function ApiKeyManager() {
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-black/35 p-5 shadow-xl shadow-black/20">
+    <section className="rounded-2xl border border-white/10 bg-black/35 p-4 sm:p-5 shadow-xl shadow-black/20">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2 text-lg font-semibold text-white">
@@ -347,14 +842,14 @@ function ApiKeyManager() {
         <input
           value={name}
           onChange={(event) => setName(event.target.value)}
-          className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-emerald-300"
+          className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white outline-none focus:border-emerald-300 touch-manipulation min-h-[44px]"
           placeholder="Key name"
         />
         <button
           type="button"
           onClick={onCreate}
           disabled={busy}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-black disabled:opacity-50"
+          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-400 px-4 py-3 text-sm font-bold text-black disabled:opacity-50 touch-manipulation min-h-[44px]"
         >
           <Plus className="h-4 w-4" />
           Create API key
@@ -367,7 +862,7 @@ function ApiKeyManager() {
           <button
             type="button"
             onClick={() => copy(`curl -H "x-sonexa-api-key: sx_your_key" "${endpoint}"`)}
-            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-white hover:bg-white/10"
+            className="inline-flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs text-white hover:bg-white/10 touch-manipulation min-h-[36px]"
           >
             <Copy className="h-3.5 w-3.5" />
             Copy curl
@@ -386,7 +881,7 @@ x-sonexa-api-key: sx_your_key`}</pre>
             <button
               type="button"
               onClick={() => copy(createdKey)}
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-black"
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-xs font-bold text-black touch-manipulation min-h-[36px]"
             >
               <Copy className="h-3.5 w-3.5" />
               Copy key
@@ -416,7 +911,7 @@ x-sonexa-api-key: sx_your_key`}</pre>
                 type="button"
                 disabled={busy}
                 onClick={() => onRevoke(key.id)}
-                className="rounded-lg border border-red-300/30 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-400/10 disabled:opacity-50"
+                className="rounded-lg border border-red-300/30 px-3 py-2 text-xs font-semibold text-red-200 hover:bg-red-400/10 disabled:opacity-50 touch-manipulation min-h-[36px]"
               >
                 Revoke
               </button>
@@ -468,7 +963,7 @@ function FeatureConfigManager() {
   }
 
   return (
-    <div className="mt-8 rounded-xl border border-border bg-card/40 p-5 space-y-5">
+    <div className="mt-8 rounded-xl border border-border bg-card/40 p-4 sm:p-5 space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div>
           <div className="text-sm font-semibold">iTunes / BGM previews</div>
@@ -479,7 +974,7 @@ function FeatureConfigManager() {
         </div>
         <button
           onClick={toggleItunes}
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm font-semibold hover:bg-background"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm font-semibold hover:bg-background touch-manipulation min-h-[44px]"
         >
           {itunesEnabled ? (
             <ToggleRight className="h-5 w-5 text-primary" />
@@ -499,7 +994,7 @@ function FeatureConfigManager() {
         </div>
         <button
           onClick={toggleRadio}
-          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm font-semibold hover:bg-background"
+          className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background/60 px-3 py-2 text-sm font-semibold hover:bg-background touch-manipulation min-h-[44px]"
         >
           {radioEnabled ? (
             <ToggleRight className="h-5 w-5 text-primary" />
@@ -589,7 +1084,7 @@ function HomeConfigManager() {
         <button
           onClick={saveHome}
           disabled={saving}
-          className="justify-self-start px-4 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60"
+          className="justify-self-start px-4 py-2.5 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60 touch-manipulation min-h-[44px]"
         >
           {saving ? "Saving..." : "Save Branding"}
         </button>
@@ -650,7 +1145,7 @@ function IntroConfigManager() {
         <button
           onClick={saveIntro}
           disabled={saving}
-          className="justify-self-start px-4 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60"
+          className="justify-self-start px-4 py-2.5 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60 touch-manipulation min-h-[44px]"
         >
           {saving ? "Saving..." : "Save intro"}
         </button>
@@ -852,7 +1347,7 @@ function YouTubeAdder() {
   }
 
   return (
-    <div className="mt-8 p-5 rounded-xl border border-border bg-card/40">
+    <div className="mt-8 p-4 sm:p-5 rounded-xl border border-border bg-card/40">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <Youtube className="h-4 w-4 text-primary" /> YouTube catalog
       </div>
@@ -865,12 +1360,12 @@ function YouTubeAdder() {
           value={url}
           onChange={(e) => setUrl(e.target.value)}
           placeholder="https://www.youtube.com/watch?v=..."
-          className="flex-1 px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="flex-1 px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         />
         <select
           value={lang}
           onChange={(e) => setLang(e.target.value)}
-          className="px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         >
           {["tamil", "hindi", "telugu", "malayalam", "english", "kannada"].map((l) => (
             <option key={l} value={l}>
@@ -881,7 +1376,7 @@ function YouTubeAdder() {
         <button
           onClick={onLookup}
           disabled={busy}
-          className="px-4 py-2 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5"
+          className="px-4 py-2.5 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5 touch-manipulation min-h-[44px]"
         >
           <Search className="h-4 w-4" />
           {busy ? "Looking..." : "Lookup"}
@@ -898,12 +1393,12 @@ function YouTubeAdder() {
             }
           }}
           placeholder="Search YouTube by song, artist, or movie"
-          className="flex-1 px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="flex-1 px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         />
         <button
           onClick={runSearch}
           disabled={searchBusy}
-          className="px-4 py-2 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-60"
+          className="px-4 py-2.5 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-60 touch-manipulation min-h-[44px]"
         >
           <Search className="h-4 w-4" />
           {searchBusy ? "Searching..." : "Search YouTube"}
@@ -924,7 +1419,7 @@ function YouTubeAdder() {
               <button
                 onClick={() => addFromUrl(result.sourceUrl, result.title)}
                 disabled={addingUrl === result.sourceUrl}
-                className="px-3 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-xs inline-flex items-center gap-1.5 disabled:opacity-60"
+                className="px-3 py-2.5 rounded-lg bg-brand-gradient text-background font-semibold text-xs inline-flex items-center gap-1.5 disabled:opacity-60 touch-manipulation min-h-[36px]"
               >
                 <Plus className="h-4 w-4" />
                 {addingUrl === result.sourceUrl ? "Adding..." : "Add"}
@@ -938,12 +1433,12 @@ function YouTubeAdder() {
           value={channelUrl}
           onChange={(e) => setChannelUrl(e.target.value)}
           placeholder="https://www.youtube.com/@channel or /channel/UC..."
-          className="flex-1 px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="flex-1 px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         />
         <button
           onClick={importChannel}
           disabled={channelBusy}
-          className="px-4 py-2 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-60"
+          className="px-4 py-2.5 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-60 touch-manipulation min-h-[44px]"
         >
           <Plus className="h-4 w-4" />
           {channelBusy ? "Importing..." : "Import latest 12"}
@@ -954,12 +1449,12 @@ function YouTubeAdder() {
           value={playlistUrl}
           onChange={(e) => setPlaylistUrl(e.target.value)}
           placeholder="https://www.youtube.com/playlist?list=..."
-          className="flex-1 px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="flex-1 px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         />
         <button
           onClick={importPlaylist}
           disabled={playlistBusy}
-          className="px-4 py-2 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-60"
+          className="px-4 py-2.5 rounded-lg bg-background/60 hover:bg-background text-sm inline-flex items-center justify-center gap-1.5 disabled:opacity-60 touch-manipulation min-h-[44px]"
         >
           <Plus className="h-4 w-4" />
           {playlistBusy ? "Importing..." : "Import playlist"}
@@ -976,7 +1471,7 @@ function YouTubeAdder() {
           </div>
           <button
             onClick={save}
-            className="px-3 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-sm inline-flex items-center gap-1.5"
+            className="px-3 py-2.5 rounded-lg bg-brand-gradient text-background font-semibold text-sm inline-flex items-center gap-1.5 touch-manipulation min-h-[44px]"
           >
             <Plus className="h-4 w-4" />
             Add
@@ -1018,7 +1513,7 @@ function YouTubeAdder() {
                     <div className="mt-1 text-[11px] text-primary">Cloud backup saved</div>
                   )}
                 </div>
-                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background/60 px-3 py-2 text-xs font-semibold hover:bg-background">
+                <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background/60 px-3 py-2 text-xs font-semibold hover:bg-background touch-manipulation min-h-[36px]">
                   <Upload className="h-4 w-4" />
                   {backupBusy === track.video_id ? "Saving..." : "Backup"}
                   <input
@@ -1031,7 +1526,7 @@ function YouTubeAdder() {
                 </label>
                 <button
                   onClick={() => remove(track.video_id)}
-                  className="h-8 w-8 grid place-items-center rounded-md bg-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  className="h-8 w-8 grid place-items-center rounded-md bg-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground touch-manipulation"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -1166,7 +1661,7 @@ function RadioStationManager() {
   }
 
   return (
-    <div className="mt-8 p-5 rounded-xl border border-border bg-card/40">
+    <div className="mt-8 p-4 sm:p-5 rounded-xl border border-border bg-card/40">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <Youtube className="h-4 w-4 text-primary" /> Radio Stations
       </div>
@@ -1180,25 +1675,25 @@ function RadioStationManager() {
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Station name"
-          className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="w-full px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         />
         <input
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Description"
-          className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="w-full px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         />
         <input
           value={youtubeUrl}
           onChange={(e) => setYoutubeUrl(e.target.value)}
           placeholder="YouTube URL (https://www.youtube.com/watch?v=...)"
-          className="w-full px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="w-full px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         />
         <div className="grid grid-cols-2 gap-2">
           <select
             value={icon}
             onChange={(e) => setIcon(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-input border border-border text-sm"
+            className="px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
           >
             <option value="Radio">Radio</option>
             <option value="Sparkles">Sparkles</option>
@@ -1211,7 +1706,7 @@ function RadioStationManager() {
           <select
             value={color}
             onChange={(e) => setColor(e.target.value)}
-            className="px-3 py-2 rounded-lg bg-input border border-border text-sm"
+            className="px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
           >
             <option value="from-purple-500 to-pink-500">Purple Pink</option>
             <option value="from-green-500 to-teal-500">Green Teal</option>
@@ -1224,7 +1719,7 @@ function RadioStationManager() {
         <select
           value={basedOn}
           onChange={(e) => setBasedOn(e.target.value as any)}
-          className="px-3 py-2 rounded-lg bg-input border border-border text-sm"
+          className="px-3 py-2.5 rounded-lg bg-input border border-border text-sm touch-manipulation min-h-[44px]"
         >
           <option value="custom">Custom</option>
           <option value="song">Based on Song</option>
@@ -1237,14 +1732,14 @@ function RadioStationManager() {
               <button
                 onClick={() => handleUpdate(editingId)}
                 disabled={busy}
-                className="flex-1 px-4 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60"
+                className="flex-1 px-4 py-2.5 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60 touch-manipulation min-h-[44px]"
               >
                 {busy ? "Updating..." : "Update Station"}
               </button>
               <button
                 onClick={cancelEdit}
                 disabled={busy}
-                className="px-4 py-2 rounded-lg bg-background/60 hover:bg-background text-sm"
+                className="px-4 py-2.5 rounded-lg bg-background/60 hover:bg-background text-sm touch-manipulation min-h-[44px]"
               >
                 Cancel
               </button>
@@ -1253,7 +1748,7 @@ function RadioStationManager() {
             <button
               onClick={handleCreate}
               disabled={busy}
-              className="flex-1 px-4 py-2 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60"
+              className="flex-1 px-4 py-2.5 rounded-lg bg-brand-gradient text-background font-semibold text-sm disabled:opacity-60 touch-manipulation min-h-[44px]"
             >
               {busy ? "Creating..." : "Create Station"}
             </button>
@@ -1285,14 +1780,14 @@ function RadioStationManager() {
                 <button
                   onClick={() => startEdit(station)}
                   disabled={busy}
-                  className="p-2 rounded-md bg-background/60 hover:bg-background"
+                  className="p-2 rounded-md bg-background/60 hover:bg-background touch-manipulation min-h-[36px]"
                 >
                   <Pencil className="h-4 w-4" />
                 </button>
                 <button
                   onClick={() => handleDelete(station.id)}
                   disabled={busy}
-                  className="p-2 rounded-md bg-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                  className="p-2 rounded-md bg-destructive/20 text-destructive hover:bg-destructive hover:text-destructive-foreground touch-manipulation min-h-[36px]"
                 >
                   <Trash2 className="h-4 w-4" />
                 </button>
@@ -1373,7 +1868,7 @@ function PlaylistManager() {
   }
 
   return (
-    <div className="mt-8 p-5 rounded-xl border border-border bg-card/40">
+    <div className="mt-8 p-4 sm:p-5 rounded-xl border border-border bg-card/40">
       <div className="flex items-center gap-2 text-sm font-semibold">
         <Youtube className="h-4 w-4 text-primary" /> Playlists
       </div>
@@ -1482,7 +1977,7 @@ function DownloadManager() {
   const { data, isLoading } = useQuery({
     queryKey: ["admin-download-status"],
     queryFn: () => getStatus(),
-    refetchInterval: (data) => (data?.job?.status === "running" ? 2000 : false),
+    refetchInterval: (query) => (query.state.data?.job?.status === "running" ? 2000 : false),
   });
 
   const job = data?.job;
@@ -1896,13 +2391,14 @@ function ManageSongs() {
   const { data, isLoading } = useQuery({ queryKey: ["admin", "songs"], queryFn: () => list() });
   const [q, setQ] = useState("");
   const [editId, setEditId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<{ title: string; language: string; genre: string }>({
+  const [draft, setDraft] = useState<{ title: string; language: string; genre: string; approved: boolean }>({
     title: "",
     language: "",
     genre: "",
+    approved: false,
   });
 
-  const songs = (data?.songs ?? []) as AdminSong[];
+  const songs = (data?.songs ?? []) as (AdminSong & { approved?: boolean })[];
   const filtered = q
     ? songs.filter((s) =>
         (s.title + " " + (s.artists?.name ?? "")).toLowerCase().includes(q.toLowerCase()),
@@ -1910,9 +2406,14 @@ function ManageSongs() {
     : songs;
   const visibleSongs = q ? filtered.slice(0, 100) : filtered.slice(0, 8);
 
-  function startEdit(s: AdminSong) {
+  function startEdit(s: AdminSong & { approved?: boolean }) {
     setEditId(s.id);
-    setDraft({ title: s.title, language: s.language ?? "", genre: s.genre ?? "" });
+    setDraft({ 
+      title: s.title, 
+      language: s.language ?? "", 
+      genre: s.genre ?? "",
+      approved: s.approved !== false 
+    });
   }
 
   async function saveEdit(id: string) {
@@ -1924,6 +2425,17 @@ function ManageSongs() {
       qc.invalidateQueries({ queryKey: ["songs"] });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Save failed");
+    }
+  }
+
+  async function toggleApproval(id: string, currentApprovalStatus: boolean) {
+    try {
+      await update({ data: { songId: id, approved: !currentApprovalStatus } });
+      toast.success(!currentApprovalStatus ? "Approved" : "Unapproved");
+      qc.invalidateQueries({ queryKey: ["admin", "songs"] });
+      qc.invalidateQueries({ queryKey: ["songs"] });
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
     }
   }
 
@@ -1969,6 +2481,7 @@ function ManageSongs() {
         )}
         {visibleSongs.map((s) => {
           const editing = editId === s.id;
+          const isApproved = s.approved !== false;
           return (
             <div key={s.id} className="flex items-center gap-3 py-3">
               <img
@@ -1997,10 +2510,28 @@ function ManageSongs() {
                       className="px-2 py-1.5 rounded bg-input border border-border text-sm"
                       placeholder="Genre"
                     />
+                    <label className="flex items-center gap-2 px-2 py-1.5 rounded bg-input border border-border text-sm col-span-1 sm:col-span-3">
+                      <input
+                        type="checkbox"
+                        checked={draft.approved}
+                        onChange={(e) => setDraft((d) => ({ ...d, approved: e.target.checked }))}
+                        className="accent-primary"
+                      />
+                      <span>Approve for public</span>
+                    </label>
                   </div>
                 ) : (
                   <>
-                    <div className="font-medium text-sm truncate">{s.title}</div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-sm truncate">{s.title}</span>
+                      <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+                        isApproved 
+                          ? 'bg-green-500/20 text-green-400' 
+                          : 'bg-yellow-500/20 text-yellow-400'
+                      }`}>
+                        {isApproved ? 'Approved' : 'Pending'}
+                      </span>
+                    </div>
                     <div className="text-xs text-muted-foreground truncate">
                       {s.artists?.name ?? "Unknown"} / {s.language ?? "-"} / {s.genre ?? "-"}
                     </div>
@@ -2027,6 +2558,17 @@ function ManageSongs() {
                   </>
                 ) : (
                   <>
+                    <button
+                      onClick={() => toggleApproval(s.id, isApproved)}
+                      className={`h-8 w-8 grid place-items-center rounded-md transition-colors ${
+                        isApproved
+                          ? 'bg-green-500/20 text-green-400 hover:bg-green-500 hover:text-background'
+                          : 'bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500 hover:text-background'
+                      }`}
+                      title={isApproved ? "Disapprove" : "Approve"}
+                    >
+                      {isApproved ? <Check className="h-4 w-4" /> : <Ban className="h-4 w-4" />}
+                    </button>
                     <button
                       onClick={() => startEdit(s)}
                       className="h-8 w-8 grid place-items-center rounded-md bg-background/60 hover:bg-background"

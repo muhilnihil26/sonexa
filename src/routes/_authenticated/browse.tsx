@@ -138,6 +138,7 @@ function Browse() {
               )}
               <Link
                 to="/search"
+                search={{ q: "" }}
                 className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border bg-card/60 px-5 py-2.5 text-sm font-semibold text-foreground transition hover:bg-card active:scale-[0.99]"
               >
                 Search library

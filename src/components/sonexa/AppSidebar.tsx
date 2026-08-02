@@ -15,6 +15,9 @@ import {
   Sparkles,
   Zap,
   Music2,
+  Clock,
+  Radio,
+  Disc,
 } from "lucide-react";
 import { Brand } from "./Brand";
 import { firebaseSignOut } from "@/integrations/firebase/client";
@@ -22,15 +25,25 @@ import { useLanguagePrefs } from "@/lib/language-prefs";
 import { useSession } from "@/lib/auth";
 import { useState } from "react";
 
-const nav = [
+const mainNav = [
   { to: "/home", label: "Home", icon: Home },
-  { to: "/browse", label: "Browse", icon: Compass },
   { to: "/search", label: "Search", icon: Search },
   { to: "/library", label: "Your Library", icon: Library },
 ];
 
-const moreNav = [
+const discoverNav = [
+  { to: "/browse", label: "Browse", icon: Compass },
+  { to: "/reels", label: "Music Reels", icon: Flame },
   { to: "/vaster", label: "Vaster AI", icon: Sparkles },
+];
+
+const personalNav = [
+  { to: "/library#liked-songs", label: "Liked Songs", icon: Heart },
+  { to: "/library#create-playlist", label: "Create Playlist", icon: Plus },
+  { to: "/library#recently-played", label: "Recently Played", icon: Clock },
+];
+
+const moreNav = [
   { to: "/remote", label: "Remote", icon: MonitorSmartphone },
   { to: "/profile", label: "Profile", icon: UserCircle },
 ];
@@ -58,8 +71,9 @@ export function AppSidebar({ isAdmin }: { isAdmin?: boolean }) {
           </div>
         )}
 
+        {/* Main Navigation */}
         <nav className="flex flex-col gap-1 mt-2">
-          {[...nav, ...moreNav].map((n) => {
+          {mainNav.map((n) => {
             const active = pathname === n.to;
             const Icon = n.icon;
             return (
@@ -73,30 +87,82 @@ export function AppSidebar({ isAdmin }: { isAdmin?: boolean }) {
             );
           })}
         </nav>
-        <div className="my-3 h-px bg-border" />
-        <div className="px-3 text-xs uppercase tracking-wider text-muted-foreground mb-2">
-          Quick
+
+        {/* Discover Section */}
+        <div className="mt-4">
+          <div className="px-3 text-xs uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
+            Discover
+          </div>
+          <nav className="flex flex-col gap-1">
+            {discoverNav.map((n) => {
+              const active = pathname === n.to;
+              const Icon = n.icon;
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"}`}
+                >
+                  <Icon className="h-4 w-4" /> {n.label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
-        <a
-          href="/library#create-playlist"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
-        >
-          <Plus className="h-4 w-4" /> Create playlist
-        </a>
-        <a
-          href="/library#liked-songs"
-          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
-        >
-          <Heart className="h-4 w-4" /> Liked songs
-        </a>
-        {isAdmin && (
-          <Link
-            to="/admin"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
-          >
-            <Shield className="h-4 w-4" /> Admin
-          </Link>
-        )}
+
+        {/* Personal Section */}
+        <div className="mt-4">
+          <div className="px-3 text-xs uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
+            Your Music
+          </div>
+          <nav className="flex flex-col gap-1">
+            {personalNav.map((n) => {
+              const active = pathname.includes(n.to.split('#')[0]);
+              const Icon = n.icon;
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"}`}
+                >
+                  <Icon className="h-4 w-4" /> {n.label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* More Section */}
+        <div className="mt-4">
+          <div className="px-3 text-xs uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
+            More
+          </div>
+          <nav className="flex flex-col gap-1">
+            {moreNav.map((n) => {
+              const active = pathname === n.to;
+              const Icon = n.icon;
+              return (
+                <Link
+                  key={n.to}
+                  to={n.to}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition ${active ? "bg-sidebar-accent text-foreground" : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"}`}
+                >
+                  <Icon className="h-4 w-4" /> {n.label}
+                </Link>
+              );
+            })}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
+              >
+                <Shield className="h-4 w-4" /> Admin
+              </Link>
+            )}
+          </nav>
+        </div>
+
+        {/* Footer */}
         <div className="mt-auto pt-4 text-[10px] text-muted-foreground/70 px-3">
           <div>SONEXA</div>
           <div className="opacity-70">Listen Beyond Limits</div>
@@ -116,7 +182,7 @@ export function AppSidebar({ isAdmin }: { isAdmin?: boolean }) {
       {/* Mobile bottom bar */}
       <div className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-background/95 px-2 pb-[calc(env(safe-area-inset-bottom,0px)+0.35rem)] pt-1.5 backdrop-blur-xl md:hidden">
         <nav className="mx-auto grid max-w-md grid-cols-5 gap-1">
-          {nav.map((n) => {
+          {mainNav.map((n) => {
             const active = pathname === n.to;
             const Icon = n.icon;
             return (
@@ -149,6 +215,43 @@ export function AppSidebar({ isAdmin }: { isAdmin?: boolean }) {
           />
           <div className="absolute bottom-20 left-2 right-2 bg-card rounded-2xl border border-border p-4 shadow-glow animate-fade-up">
             <nav className="flex flex-col gap-2">
+              <div className="px-3 text-xs uppercase tracking-wider text-muted-foreground mb-2 font-semibold">
+                Discover
+              </div>
+              {discoverNav.map((n) => {
+                const active = pathname === n.to;
+                const Icon = n.icon;
+                return (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    onClick={() => setShowMoreMenu(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"}`}
+                  >
+                    <Icon className="h-5 w-5" /> {n.label}
+                  </Link>
+                );
+              })}
+              <div className="px-3 text-xs uppercase tracking-wider text-muted-foreground mb-2 mt-4 font-semibold">
+                Your Music
+              </div>
+              {personalNav.map((n) => {
+                const active = pathname.includes(n.to.split('#')[0]);
+                const Icon = n.icon;
+                return (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    onClick={() => setShowMoreMenu(false)}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition ${active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"}`}
+                  >
+                    <Icon className="h-5 w-5" /> {n.label}
+                  </Link>
+                );
+              })}
+              <div className="px-3 text-xs uppercase tracking-wider text-muted-foreground mb-2 mt-4 font-semibold">
+                More
+              </div>
               {moreNav.map((n) => {
                 const active = pathname === n.to;
                 const Icon = n.icon;
@@ -163,6 +266,15 @@ export function AppSidebar({ isAdmin }: { isAdmin?: boolean }) {
                   </Link>
                 );
               })}
+              {isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setShowMoreMenu(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition text-muted-foreground hover:text-foreground hover:bg-sidebar-accent/60"
+                >
+                  <Shield className="h-5 w-5" /> Admin
+                </Link>
+              )}
             </nav>
           </div>
         </div>

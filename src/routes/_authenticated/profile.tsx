@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Camera, Check, KeyRound, LogOut, Mail, UserCircle, MonitorSmartphone, Globe2, Music2 } from "lucide-react";
+import { Camera, Check, KeyRound, LogOut, Mail, UserCircle, MonitorSmartphone, Globe2, Music2, Users, Share2, Heart, Clock, TrendingUp } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { LANGUAGES } from "./onboarding";
@@ -218,9 +218,9 @@ function ProfilePage() {
             </div>
           </div>
           <div className="grid grid-cols-3 gap-3 text-center">
-            <Stat label="Liked" value={Object.keys(likes).length} />
-            <Stat label="Playlists" value={playlists.length} />
-            <Stat label="Plan" value="Free" />
+            <Stat label="Liked" value={Object.keys(likes).length} icon={<Heart className="h-4 w-4" />} />
+            <Stat label="Playlists" value={playlists.length} icon={<Users className="h-4 w-4" />} />
+            <Stat label="Following" value="0" icon={<Users className="h-4 w-4" />} />
           </div>
         </div>
       </section>
@@ -404,14 +404,99 @@ function ProfilePage() {
           </button>
         </div>
       </section>
+
+      {/* Social Features Section */}
+      <section className="mt-6 rounded-2xl border border-border bg-card/45 p-5">
+        <div className="mb-4 flex items-center gap-2 font-semibold">
+          <Share2 className="h-5 w-5 text-primary" /> Social & Sharing
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Share your music taste and connect with friends.
+        </p>
+        <div className="space-y-3">
+          <button
+            onClick={() => {
+              const shareUrl = `${window.location.origin}?ref=${user?.uid}`;
+              navigator.clipboard.writeText(shareUrl);
+              toast.success("Profile link copied to clipboard");
+            }}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-background/35 px-4 py-3 text-sm hover:bg-background/55 transition"
+          >
+            <div className="flex items-center gap-3">
+              <Share2 className="h-4 w-4 text-primary" />
+              <div>
+                <div className="font-semibold text-foreground">Share Profile</div>
+                <div className="text-xs text-muted-foreground">Copy your profile link to share with friends</div>
+              </div>
+            </div>
+            <div className="text-xs text-primary">Copy Link</div>
+          </button>
+
+          <button
+            onClick={() => {
+              const shareText = `Check out my music taste on Sonexa! I've liked ${Object.keys(likes).length} songs and created ${playlists.length} playlists.`;
+              navigator.clipboard.writeText(shareText);
+              toast.success("Music stats copied to clipboard");
+            }}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-background/35 px-4 py-3 text-sm hover:bg-background/55 transition"
+          >
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-4 w-4 text-primary" />
+              <div>
+                <div className="font-semibold text-foreground">Share Music Stats</div>
+                <div className="text-xs text-muted-foreground">Share your listening statistics</div>
+              </div>
+            </div>
+            <div className="text-xs text-primary">Copy Stats</div>
+          </button>
+
+          <button
+            onClick={() => toast.info("Follow feature coming soon!")}
+            className="w-full flex items-center justify-between gap-3 rounded-xl border border-border bg-background/35 px-4 py-3 text-sm hover:bg-background/55 transition"
+          >
+            <div className="flex items-center gap-3">
+              <Users className="h-4 w-4 text-primary" />
+              <div>
+                <div className="font-semibold text-foreground">Find Friends</div>
+                <div className="text-xs text-muted-foreground">Search and follow other music lovers</div>
+              </div>
+            </div>
+            <div className="text-xs text-muted-foreground">Coming Soon</div>
+          </button>
+        </div>
+      </section>
+
+      {/* Listening Activity Section */}
+      <section className="mt-6 rounded-2xl border border-border bg-card/45 p-5">
+        <div className="mb-4 flex items-center gap-2 font-semibold">
+          <Clock className="h-5 w-5 text-primary" /> Recent Activity
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Your recent listening history and activity.
+        </p>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3 rounded-xl border border-border bg-background/35 px-4 py-3 text-sm">
+            <div className="h-10 w-10 rounded-lg bg-brand-gradient flex items-center justify-center">
+              <Music2 className="h-5 w-5 text-background" />
+            </div>
+            <div className="flex-1">
+              <div className="font-semibold text-foreground">No recent activity</div>
+              <div className="text-xs text-muted-foreground">Start listening to build your history</div>
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
   );
 }
 
-function Stat({ label, value }: { label: string; value: number | string }) {
+function Stat({ label, value, icon }: { label: string; value: number | string; icon?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-border bg-background/45 px-5 py-3">
-      <div className="text-xl font-black">{value}</div>
+    <div className="rounded-2xl border border-border bg-background/45 px-4 py-3">
+      <div className="flex items-center justify-center gap-1.5">
+        {icon && <span className="text-primary">{icon}</span>}
+        <div className="text-xl font-black">{value}</div>
+      </div>
       <div className="text-xs text-muted-foreground">{label}</div>
     </div>
   );

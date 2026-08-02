@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Music2, Radio, Sparkles, Play, Pause, Headphones } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
 import { Brand } from "@/components/sonexa/Brand";
+import { LoginBackgroundMusic } from "@/components/sonexa/LoginBackgroundMusic";
 import { toast } from "sonner";
 import {
   firebaseAuth,
@@ -120,6 +121,9 @@ function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4 relative overflow-hidden">
+      {/* Background Music */}
+      <LoginBackgroundMusic />
+      
       {/* Background decorative elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-primary/10 rounded-full blur-3xl animate-float" style={{ animationDelay: '0s' }} />
