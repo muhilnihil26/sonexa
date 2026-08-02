@@ -20,6 +20,8 @@ import {
   Minimize2,
   Maximize2,
 } from "lucide-react";
+import { SocialShare } from "./SocialShare";
+import { ShortsExportButton, LyricsVideoExportButton } from "./VideoExport";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -285,8 +287,35 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
                 </span>
               </div>
             ) : (
-              <div className="relative">
-                <img
+              <>
+                <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.22em] text-white/70">
+                  <span className="flex items-center gap-1.5">
+                    <img src="/logo-icon.png" alt="Sonexa" className="h-4 w-4 rounded" />
+                    Sonexa player
+                  </span>
+                </span>
+                <div className="mb-4 flex gap-2">
+                  <ShortsExportButton track={p.current} />
+                  {lyrics?.status === "found" && lyrics.synced && (
+                    <LyricsVideoExportButton
+                      track={p.current}
+                      lyrics={lyrics.synced.map((l) => l.text)}
+                    />
+                  )}
+                </div>
+              </>
+            )}
+                <div className="mb-4 flex gap-2">
+                  <ShortsExportButton track={p.current} />
+                  {lyrics?.status === "found" && lyrics.synced && (
+                    <LyricsVideoExportButton
+                      track={p.current}
+                      lyrics={lyrics.synced.map((l) => l.text)}
+                    />
+                  )}
+                </div>
+              </>
+            )}
                   src={p.current.cover}
                   alt={p.current.title}
                   className={`aspect-square w-full rounded-2xl object-cover shadow-glow animate-img-in ${p.isPlaying ? "animate-cover-float" : ""} ${compactMode ? "max-w-[200px]" : "max-w-sm"}`}
@@ -412,12 +441,7 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
                   >
                     <Heart className="h-3.5 w-3.5" /> {social?.stats.likeCount ?? 0}
                   </button>
-                  <button
-                    onClick={shareCurrent}
-                    className="inline-flex items-center gap-1 rounded-full bg-card/70 px-3 py-1.5 hover:text-foreground backdrop-blur"
-                  >
-                    <Share2 className="h-3.5 w-3.5" /> Share
-                  </button>
+                  <SocialShare track={p.current} videoUrl={isYouTube ? `https://www.youtube.com/watch?v=${p.current.ytId}` : undefined} />
                 </div>
               </>
             )}
