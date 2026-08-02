@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { generateSmartPlaylists } from "@/lib/auto-playlists";
-import { Download, Globe2, Heart, ListMusic, Plus, Play, Trash2 } from "lucide-react";
+import { Download, Globe2, Heart, ListMusic, Plus, Play, Trash2, Edit2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useLocalLibrary } from "@/lib/local-library";
@@ -12,6 +12,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
 import { listAdminYouTubeTracks } from "@/lib/api/youtube.functions";
 import { isYtBroken } from "@/lib/player-store";
+import { PlaylistRenameDialog } from "@/components/sonexa/PlaylistContextMenu";
 
 export const Route = createFileRoute("/_authenticated/library")({
   head: () => ({ meta: [{ title: "Your Library - Sonexa" }] }),
@@ -19,11 +20,13 @@ export const Route = createFileRoute("/_authenticated/library")({
 });
 
 function Library() {
-  const { likes, playlists, createPlaylist, deletePlaylist } = useLocalLibrary();
+  const { likes, playlists, createPlaylist, deletePlaylist, renamePlaylist } = useLocalLibrary();
   const { play } = usePlayer();
   const { user } = useSession();
   const { gridClass } = useProfilePrefs();
   const [title, setTitle] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState("");
   const listYouTube = useServerFn(listAdminYouTubeTracks);
 
   const { data } = useQuery({
@@ -184,6 +187,12 @@ function Library() {
                   <ListMusic className="h-3 w-3" /> Details
                 </Link>
                 <button
+                  onClick={() => setEditingId(playlist.id)}
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                >
+                  <Edit2 className="h-3 w-3" /> Rename
+                </button>
+                <button
                   onClick={() => {
                     const added = saveOfflinePlaylist(playlist.tracks, user?.email);
                     toast.success(
@@ -249,6 +258,14 @@ function Library() {
           ))}
         </div>
       </section>
+
+      {editingId && (
+        <PlaylistRenameDialog
+          playlistId={editingId}
+          currentName={playlists.find((p) => p.id === editingId)?.name || ""}
+          onClose={() => setEditingId(null)}
+        />
+      )}
     </div>
   );
 }
