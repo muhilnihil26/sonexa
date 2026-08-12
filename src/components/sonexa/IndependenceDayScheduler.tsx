@@ -211,7 +211,7 @@ export function IndependenceDayScheduler() {
                           : 'bg-card/60 text-muted-foreground hover:text-green-400'
                       }`}
                     >
-                      {event.isCompleted ? <Check className="h-4 w-4" /> <Bell className="h-4 w-4" />}
+                      {event.isCompleted ? <Check className="h-4 w-4" /> : <Bell className="h-4 w-4" />}
                     </button>
                     <button className="p-2 rounded-full bg-card/60 text-muted-foreground hover:text-primary transition-colors">
                       <Plus className="h-4 w-4" />
