@@ -7,6 +7,15 @@ import { MusicClock } from "@/components/sonexa/MusicClock";
 import { AndroidDownloadChooser } from "@/components/sonexa/AndroidDownloadChooser";
 import { RadioStations } from "@/components/sonexa/RadioStations";
 import { SongRecommendations } from "@/components/sonexa/SongRecommendations";
+import { IndependenceDayBanner } from "@/components/sonexa/IndependenceDayBanner";
+import { PatrioticMusicSection } from "@/components/sonexa/PatrioticMusicSection";
+import { IndependenceDayPodcast } from "@/components/sonexa/IndependenceDayPodcast";
+import { PatrioticScrollEffects } from "@/components/sonexa/PatrioticScrollEffects";
+import { PatrioticQuotes } from "@/components/sonexa/PatrioticQuotes";
+import { FlagAnimation } from "@/components/sonexa/FlagAnimation";
+import { IndependenceDayScheduler } from "@/components/sonexa/IndependenceDayScheduler";
+import { IndependenceDayInvite } from "@/components/sonexa/IndependenceDayInvite";
+import { PromotionalBanner } from "@/components/sonexa/InvitationThumbnail";
 import { useSession } from "@/lib/auth";
 import { useLanguagePrefs } from "@/lib/language-prefs";
 import { isYtBroken, usePlayer, type Track } from "@/lib/player-store";
@@ -125,6 +134,9 @@ function Home() {
 
   return (
     <div className="space-y-8 p-4 sm:p-6 md:p-10 pb-36 max-w-7xl mx-auto">
+      {/* Patriotic Scroll Effects */}
+      <PatrioticScrollEffects />
+      
       {/* Language Selector */}
       <div className="relative">
         <button
@@ -394,6 +406,46 @@ function Home() {
           </div>
         </section>
       )}
+
+      {/* Independence Day Special Section */}
+      <section className="animate-fade-up duration-700 [animation-delay:30ms] [animation-fill-mode:both]">
+        <IndependenceDayBanner />
+      </section>
+
+      {/* Patriotic Music Collection */}
+      <section className="animate-fade-up duration-700 [animation-delay:40ms] [animation-fill-mode:both]">
+        <PatrioticMusicSection />
+      </section>
+
+      {/* Independence Day Podcast Schedule */}
+      <section className="animate-fade-up duration-700 [animation-delay:50ms] [animation-fill-mode:both]">
+        <IndependenceDayPodcast />
+      </section>
+
+      {/* Flag Animation */}
+      <section className="animate-fade-up duration-700 [animation-delay:60ms] [animation-fill-mode:both]">
+        <FlagAnimation />
+      </section>
+
+      {/* Patriotic Quotes */}
+      <section className="animate-fade-up duration-700 [animation-delay:70ms] [animation-fill-mode:both]">
+        <PatrioticQuotes />
+      </section>
+
+      {/* Independence Day Scheduler */}
+      <section className="animate-fade-up duration-700 [animation-delay:80ms] [animation-fill-mode:both]">
+        <IndependenceDayScheduler />
+      </section>
+
+      {/* Promotional Banner */}
+      <section className="animate-fade-up duration-700 [animation-delay:90ms] [animation-fill-mode:both]">
+        <PromotionalBanner />
+      </section>
+
+      {/* Independence Day Invite */}
+      <section className="animate-fade-up duration-700 [animation-delay:100ms] [animation-fill-mode:both]">
+        <IndependenceDayInvite />
+      </section>
 
       {/* Recents Spotify-style grid layout */}
       {recent.length > 0 && (

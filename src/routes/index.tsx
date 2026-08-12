@@ -11,6 +11,10 @@ import cover3 from "@/assets/cover-3.jpg";
 import cover5 from "@/assets/cover-5.jpg";
 import { Brand } from "@/components/sonexa/Brand";
 import { AndroidDownloadChooser } from "@/components/sonexa/AndroidDownloadChooser";
+import { IndependenceDayBanner } from "@/components/sonexa/IndependenceDayBanner";
+import { PatrioticScrollEffects } from "@/components/sonexa/PatrioticScrollEffects";
+import { PatrioticQuotes } from "@/components/sonexa/PatrioticQuotes";
+import { PromotionalBanner } from "@/components/sonexa/InvitationThumbnail";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -82,6 +86,9 @@ function Landing() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
+      {/* Patriotic Scroll Effects */}
+      <PatrioticScrollEffects />
+      
       {/* Background hero image with glow */}
       <div className="absolute inset-0 -z-10">
         <img
@@ -211,11 +218,26 @@ function Landing() {
             </div>
           ))}
         </div>
+
+        {/* Independence Day Banner */}
+        <div className="mt-16">
+          <IndependenceDayBanner />
+        </div>
+
+        {/* Patriotic Quotes */}
+        <div className="mt-12">
+          <PatrioticQuotes />
+        </div>
+
+        {/* Promotional Banner */}
+        <div className="mt-12">
+          <PromotionalBanner />
+        </div>
       </main>
 
       <footer className="border-t border-border px-6 md:px-12 py-8 text-xs text-muted-foreground flex flex-wrap items-center justify-between gap-3">
         <div>© {new Date().getFullYear()} Sonexa</div>
-        <div className="opacity-70">SONEXA · Listen Beyond Limits · By War.Dev</div>
+        <div className="opacity-70">SONEXA · Listen Beyond Limits · Created by War.Dev</div>
       </footer>
     </div>
   );
