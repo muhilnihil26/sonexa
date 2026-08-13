@@ -11,10 +11,8 @@ import cover3 from "@/assets/cover-3.jpg";
 import cover5 from "@/assets/cover-5.jpg";
 import { Brand } from "@/components/sonexa/Brand";
 import { AndroidDownloadChooser } from "@/components/sonexa/AndroidDownloadChooser";
-import { IndependenceDayBanner } from "@/components/sonexa/IndependenceDayBanner";
-import { PatrioticScrollEffects } from "@/components/sonexa/PatrioticScrollEffects";
-import { PatrioticQuotes } from "@/components/sonexa/PatrioticQuotes";
-import { PromotionalBanner } from "@/components/sonexa/InvitationThumbnail";
+import { RealisticFlag } from "@/components/sonexa/RealisticFlag";
+import { IndependenceMusicPlayer } from "@/components/sonexa/IndependenceMusicPlayer";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -86,9 +84,6 @@ function Landing() {
 
   return (
     <div className="min-h-screen relative overflow-hidden">
-      {/* Patriotic Scroll Effects */}
-      <PatrioticScrollEffects />
-      
       {/* Background hero image with glow */}
       <div className="absolute inset-0 -z-10">
         <img
@@ -224,14 +219,9 @@ function Landing() {
           <IndependenceDayBanner />
         </div>
 
-        {/* Patriotic Quotes */}
+        {/* Independence Day Feature */}
         <div className="mt-12">
-          <PatrioticQuotes />
-        </div>
-
-        {/* Promotional Banner */}
-        <div className="mt-12">
-          <PromotionalBanner />
+          <RealisticFlag />
         </div>
       </main>
 

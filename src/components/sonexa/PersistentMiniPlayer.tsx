@@ -1,6 +1,6 @@
 import { Play, Pause, SkipBack, SkipForward, X, Volume2, Maximize2, Minimize2 } from "lucide-react";
 import { useEffect, useState, useRef } from "react";
-import { usePlayerStore } from "@/lib/player-store";
+import { usePlayer } from "@/lib/player-store";
 import type { Track } from "@/lib/player-store";
 
 /**
@@ -8,15 +8,14 @@ import type { Track } from "@/lib/player-store";
  * Works like Spotify's mini player - always visible, can be minimized/expanded
  */
 export function PersistentMiniPlayer() {
-  const { current, isPlaying, play, pause, next, prev } = usePlayerStore();
+  const { current, isPlaying, toggle, next, prev } = usePlayer();
   const [isMinimized, setIsMinimized] = useState(true);
-  const [position, setPosition] = useState({ x: window.innerWidth - 380, y: window.innerHeight - 120 });
+  // Constant initial state keeps server and client hydration in sync.
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-
-  if (!current) return null;
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("button")) return;
@@ -39,6 +38,7 @@ export function PersistentMiniPlayer() {
     setIsDragging(false);
   };
 
+  // Hooks must run unconditionally — the early return goes after them.
   useEffect(() => {
     if (isDragging) {
       document.addEventListener("mousemove", handleMouseMove);
@@ -57,6 +57,16 @@ export function PersistentMiniPlayer() {
       audioRef.current = mainAudio;
     }
   }, []);
+
+  // Position the mini player in the corner only after mount (browser-only).
+  useEffect(() => {
+    setPosition({
+      x: Math.max(0, window.innerWidth - 380),
+      y: Math.max(0, window.innerHeight - 120),
+    });
+  }, []);
+
+  if (!current) return null;
 
   return (
     <div
@@ -150,7 +160,7 @@ export function PersistentMiniPlayer() {
             <SkipBack className="h-5 w-5 text-muted-foreground hover:text-foreground" />
           </button>
           <button
-            onClick={() => (isPlaying ? pause() : play())}
+            onClick={toggle}
             className="p-3 rounded-full bg-brand-gradient text-background hover:scale-110 transition-transform"
             title={isPlaying ? "Pause" : "Play"}
           >
@@ -192,7 +202,7 @@ export function PersistentMiniPlayer() {
 
           {/* Play/Pause Button */}
           <button
-            onClick={() => (isPlaying ? pause() : play())}
+            onClick={toggle}
             className="p-2 rounded-lg bg-primary/20 hover:bg-primary/30 transition"
             title={isPlaying ? "Pause" : "Play"}
           >

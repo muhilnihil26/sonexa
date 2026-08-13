@@ -70,6 +70,10 @@ export function IndependenceDayPodcast() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentTime, setCurrentTime] = useState("0:00");
+  
+  // Check if today is August 15th - disabled for testing
+  const today = new Date();
+  const isAugust15 = true; // Set to true for testing, change to: today.getMonth() === 7 && today.getDate() === 15
 
   useEffect(() => {
     // Simulate progress when playing
@@ -106,6 +110,8 @@ export function IndependenceDayPodcast() {
   };
 
   const isEpisodeLive = (episode: PodcastEpisode) => {
+    if (!isAugust15) return false; // Only live on August 15
+    
     const now = new Date();
     const airDate = new Date(episode.airDate);
     const endDate = new Date(airDate.getTime() + parseFloat(episode.duration) * 60 * 1000);
@@ -202,7 +208,18 @@ export function IndependenceDayPodcast() {
 
       {/* Podcast schedule */}
       <div className="space-y-4">
-        {independencePodcasts.map((episode, index) => (
+        {!isAugust15 ? (
+          <div className="p-6 rounded-2xl border border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-white/5 to-green-500/10 backdrop-blur text-center">
+            <div className="text-4xl mb-4">🎙️</div>
+            <h4 className="text-xl font-bold mb-2">Live Podcast Coming Soon</h4>
+            <p className="text-muted-foreground mb-4">Independence Day live podcast will be available on August 15th only.</p>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-orange-500/20 text-orange-400">
+              <Calendar className="h-4 w-4" />
+              <span className="font-semibold">August 15, 2026</span>
+            </div>
+          </div>
+        ) : (
+          independencePodcasts.map((episode, index) => (
           <div
             key={episode.id}
             className={`group p-4 rounded-2xl border transition-all duration-300 hover:scale-[1.02] ${
@@ -273,7 +290,7 @@ export function IndependenceDayPodcast() {
               </div>
             </div>
           </div>
-        ))}
+        )))}
       </div>
 
       {/* Subscribe reminder */}

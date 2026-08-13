@@ -21,6 +21,8 @@ import {
   Maximize2,
 } from "lucide-react";
 import { NativeAudioControls } from "./NativeAudioControls";
+import { ShortsExportButton, LyricsVideoExportButton } from "./VideoExport";
+import { SocialShare } from "./SocialShare";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -292,7 +294,7 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
                     <img src="/logo-icon.png" alt="Sonexa" className="h-4 w-4 rounded" />
                     Sonexa player
                   </span>
-                </span>
+                </div>
                 <div className="mb-4 flex gap-2">
                   <ShortsExportButton track={p.current} />
                   {lyrics?.status === "found" && lyrics.synced && (
@@ -302,29 +304,19 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
                     />
                   )}
                 </div>
-              </>
-            )}
-                <div className="mb-4 flex gap-2">
-                  <ShortsExportButton track={p.current} />
-                  {lyrics?.status === "found" && lyrics.synced && (
-                    <LyricsVideoExportButton
-                      track={p.current}
-                      lyrics={lyrics.synced.map((l) => l.text)}
-                    />
-                  )}
+                <div className="relative">
+                  <img
+                    src={p.current.cover}
+                    alt={p.current.title}
+                    className={`aspect-square w-full rounded-2xl object-cover shadow-glow animate-img-in ${p.isPlaying ? "animate-cover-float" : ""} ${compactMode ? "max-w-[200px]" : "max-w-sm"}`}
+                  />
+                  {/* Sonexa watermark */}
+                  <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-md">
+                    <img src="/logo-icon.png" alt="Sonexa" className="h-4 w-4 rounded" />
+                    <span className="text-[10px] font-semibold text-white/90">Sonexa</span>
+                  </div>
                 </div>
               </>
-            )}
-                  src={p.current.cover}
-                  alt={p.current.title}
-                  className={`aspect-square w-full rounded-2xl object-cover shadow-glow animate-img-in ${p.isPlaying ? "animate-cover-float" : ""} ${compactMode ? "max-w-[200px]" : "max-w-sm"}`}
-                />
-                {/* Sonexa watermark */}
-                <div className="absolute bottom-3 right-3 flex items-center gap-1.5 px-2 py-1 rounded-full bg-black/40 backdrop-blur-md">
-                  <img src="/logo-icon.png" alt="Sonexa" className="h-4 w-4 rounded" />
-                  <span className="text-[10px] font-semibold text-white/90">Sonexa</span>
-                </div>
-              </div>
             )}
             <div className={`${isYouTube ? "mt-1" : compactMode ? "mt-4" : "mt-8"} text-center w-full`}>
               <div className="mx-auto max-w-full overflow-hidden">
@@ -443,7 +435,7 @@ export function FullScreenPlayer({ open, onClose }: { open: boolean; onClose: ()
                   <SocialShare track={p.current} videoUrl={isYouTube ? `https://www.youtube.com/watch?v=${p.current.ytId}` : undefined} />
                   {/* Audio Controls - Native equalizer */}
                   <div className="mt-4 w-full max-w-sm mx-auto">
-                    <NativeAudioControls audioElement={audioRef.current} />
+                    <NativeAudioControls audioElement={p.audioRef.current} />
                   </div>
                 </div>
               </>

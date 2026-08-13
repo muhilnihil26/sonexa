@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sonexaGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#8b5cf6"/>
+      <stop offset="100%" stop-color="#d946ef"/>
+    </linearGradient>
+  </defs>
+  <!-- Rounded tile -->
+  <rect x="16" y="16" width="480" height="480" rx="120" fill="url(#sonexaGrad)"/>
+  <!-- Subtle inner highlight -->
+  <rect x="24" y="24" width="464" height="464" rx="112" fill="none" stroke="#ffffff" stroke-opacity="0.18" stroke-width="6"/>
+  <!-- Soundwave bars + play -->
+  <rect x="118" y="181" width="36" height="150" rx="18" fill="#ffffff"/>
+  <rect x="178" y="141" width="36" height="230" rx="18" fill="#ffffff"/>
+  <path d="M 244 222 L 244 290 L 300 256 Z" fill="#ffffff"/>
+  <rect x="298" y="141" width="36" height="230" rx="18" fill="#ffffff"/>
+  <rect x="358" y="181" width="36" height="150" rx="18" fill="#ffffff"/>
+</svg>

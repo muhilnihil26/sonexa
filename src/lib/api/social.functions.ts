@@ -33,6 +33,8 @@ type SongComment = {
 type IntroConfig = {
   youtube_url?: string | null;
   title?: string | null;
+  photo_url?: string | null;
+  reveal_text?: string | null;
   updated_at?: string | null;
 };
 
@@ -210,6 +212,8 @@ export const getIntroConfig = createServerFn({ method: "GET" }).handler(async ()
   return {
     youtubeUrl: config?.youtube_url ?? "",
     title: config?.title ?? "Listen Beyond Limits",
+    photoUrl: config?.photo_url ?? null,
+    revealText: config?.reveal_text ?? null,
   };
 });
 
@@ -219,6 +223,8 @@ export const adminSetIntroConfig = createServerFn({ method: "POST" })
     z.object({
       youtubeUrl: z.string().url().or(z.literal("")),
       title: z.string().min(1).max(120).default("Listen Beyond Limits"),
+      photoUrl: z.string().url().or(z.literal("")).optional(),
+      revealText: z.string().max(200).optional(),
     }),
   )
   .handler(async ({ data, context }) => {
@@ -228,6 +234,8 @@ export const adminSetIntroConfig = createServerFn({ method: "POST" })
       {
         youtube_url: data.youtubeUrl,
         title: data.title,
+        photo_url: data.photoUrl || null,
+        reveal_text: data.revealText || null,
         updated_at: nowIso(),
       },
       context.firebaseToken,

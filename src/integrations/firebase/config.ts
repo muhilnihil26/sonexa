@@ -4,6 +4,7 @@ export const ADMIN_EMAIL = "muhilsiddhesh.in@gmail.com";
 export const firebaseConfig = {
   apiKey: "AIzaSyAVcQv33K-5aszf7Psey_E-9Wl_yUEXaP4",
   authDomain: "sonexa-war.firebaseapp.com",
+  databaseURL: "https://sonexa-war-default-rtdb.firebaseio.com",
   projectId: FIREBASE_PROJECT_ID,
   storageBucket: "sonexa-war.firebasestorage.app",
   messagingSenderId: "1076281487935",

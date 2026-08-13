@@ -18,8 +18,10 @@ import {
   Clock,
   Radio,
   Disc,
+  Pause,
 } from "lucide-react";
 import { Brand } from "./Brand";
+import { usePlayer } from "@/lib/player-store";
 import { firebaseSignOut } from "@/integrations/firebase/client";
 import { useLanguagePrefs } from "@/lib/language-prefs";
 import { useSession } from "@/lib/auth";
@@ -53,6 +55,7 @@ export function AppSidebar({ isAdmin }: { isAdmin?: boolean }) {
   const [showMoreMenu, setShowMoreMenu] = useState(false);
   const { user } = useSession();
   const { languages } = useLanguagePrefs(user?.id);
+  const { current, isPlaying } = usePlayer();
   return (
     <>
       <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col gap-2 overflow-y-auto border-r border-border bg-sidebar p-4 md:flex">
@@ -162,11 +165,57 @@ export function AppSidebar({ isAdmin }: { isAdmin?: boolean }) {
           </nav>
         </div>
 
+        {/* Now Playing */}
+        <div className="mt-auto px-3 pt-4">
+          {current ? (
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-card/60 p-3 shadow-card backdrop-blur transition hover:bg-card">
+              <img
+                src={current.cover || "/logo-icon.png"}
+                alt=""
+                className="h-10 w-10 shrink-0 rounded-lg object-cover ring-1 ring-white/10"
+              />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5">
+                  <span className="flex h-3 items-end gap-[2px]">
+                    {isPlaying ? (
+                      [0, 1, 2, 3].map((i) => (
+                        <span
+                          key={i}
+                          className="w-[3px] rounded-full bg-primary"
+                          style={{
+                            height: `${[100, 55, 80, 65][i]}%`,
+                            transformOrigin: "bottom",
+                            animation: `sonexa-bar 0.9s ease-in-out infinite`,
+                            animationDelay: `${i * 0.15}s`,
+                          }}
+                        />
+                      ))
+                    ) : (
+                      <Pause className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </span>
+                  <span
+                    className={`text-[10px] uppercase tracking-widest font-bold ${isPlaying ? "text-primary" : "text-muted-foreground"}`}
+                  >
+                    {isPlaying ? "Now Playing" : "Paused"}
+                  </span>
+                </div>
+                <div className="mt-1 truncate text-sm font-semibold text-foreground">{current.title}</div>
+                <div className="truncate text-xs text-muted-foreground">{current.artist}</div>
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/70 px-3 py-4 text-center text-[11px] text-muted-foreground/70">
+              Nothing playing — pick a song to start
+            </div>
+          )}
+        </div>
+
         {/* Footer */}
-        <div className="mt-auto pt-4 text-[10px] text-muted-foreground/70 px-3">
+        <div className="pt-4 text-[10px] text-muted-foreground/70 px-3">
           <div>SONEXA</div>
           <div className="opacity-70">Listen Beyond Limits</div>
-          <div className="opacity-50 mt-1">By War.Dev</div>
+          <div className="opacity-50 mt-1">Created by War.Dev</div>
           <button
             onClick={async () => {
               await firebaseSignOut();
