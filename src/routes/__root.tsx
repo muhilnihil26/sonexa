@@ -16,6 +16,8 @@ import { Toaster } from "../components/ui/sonner";
 import { KeyboardShortcuts } from "../components/sonexa/KeyboardShortcuts";
 import { IntroAnimation } from "../components/sonexa/IntroAnimation";
 import { PersistentMiniPlayer } from "../components/sonexa/PersistentMiniPlayer";
+import { useHolidayTheme } from "../hooks/useHolidayTheme";
+import { RealisticFlag } from "../components/sonexa/RealisticFlag";
 
 function NotFoundComponent() {
   return (
@@ -149,6 +151,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
   const [showIntro, setShowIntro] = useState(true);
+  useHolidayTheme();
 
   useEffect(() => {
     document.getElementById("sonexa-native-boot")?.remove();
@@ -190,6 +193,10 @@ function RootComponent() {
         <PersistentMiniPlayer />
         <div className="min-h-screen animate-fade-up smooth-scroll">
           <Outlet />
+        </div>
+        {/* Realistic flag on every page */}
+        <div className="fixed bottom-4 left-4 z-40 opacity-70 hover:opacity-100 transition-opacity pointer-events-none hidden md:block">
+          <RealisticFlag />
         </div>
         <Toaster 
           theme="dark" 

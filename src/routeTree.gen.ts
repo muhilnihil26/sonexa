@@ -15,6 +15,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SongIdRouteImport } from './routes/song.$id'
 import { Route as AuthenticatedVasterRouteImport } from './routes/_authenticated/vaster'
+import { Route as AuthenticatedStatsRouteImport } from './routes/_authenticated/stats'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedRemoteRouteImport } from './routes/_authenticated/remote'
 import { Route as AuthenticatedReelsRouteImport } from './routes/_authenticated/reels'
@@ -22,6 +23,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedOnboardingRouteImport } from './routes/_authenticated/onboarding'
 import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedDriveRouteImport } from './routes/_authenticated/drive'
 import { Route as AuthenticatedBrowseRouteImport } from './routes/_authenticated/browse'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedPlaylistIdRouteImport } from './routes/_authenticated/playlist.$id'
@@ -55,6 +57,11 @@ const SongIdRoute = SongIdRouteImport.update({
 const AuthenticatedVasterRoute = AuthenticatedVasterRouteImport.update({
   id: '/vaster',
   path: '/vaster',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedStatsRoute = AuthenticatedStatsRouteImport.update({
+  id: '/stats',
+  path: '/stats',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
@@ -92,6 +99,11 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedDriveRoute = AuthenticatedDriveRouteImport.update({
+  id: '/drive',
+  path: '/drive',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedBrowseRoute = AuthenticatedBrowseRouteImport.update({
   id: '/browse',
   path: '/browse',
@@ -124,6 +136,7 @@ export interface FileRoutesByFullPath {
   '/intro': typeof IntroRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/browse': typeof AuthenticatedBrowseRoute
+  '/drive': typeof AuthenticatedDriveRoute
   '/home': typeof AuthenticatedHomeRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -131,6 +144,7 @@ export interface FileRoutesByFullPath {
   '/reels': typeof AuthenticatedReelsRoute
   '/remote': typeof AuthenticatedRemoteRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/stats': typeof AuthenticatedStatsRoute
   '/vaster': typeof AuthenticatedVasterRoute
   '/song/$id': typeof SongIdRoute
   '/album/$id': typeof AuthenticatedAlbumIdRoute
@@ -143,6 +157,7 @@ export interface FileRoutesByTo {
   '/intro': typeof IntroRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/browse': typeof AuthenticatedBrowseRoute
+  '/drive': typeof AuthenticatedDriveRoute
   '/home': typeof AuthenticatedHomeRoute
   '/library': typeof AuthenticatedLibraryRoute
   '/onboarding': typeof AuthenticatedOnboardingRoute
@@ -150,6 +165,7 @@ export interface FileRoutesByTo {
   '/reels': typeof AuthenticatedReelsRoute
   '/remote': typeof AuthenticatedRemoteRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/stats': typeof AuthenticatedStatsRoute
   '/vaster': typeof AuthenticatedVasterRoute
   '/song/$id': typeof SongIdRoute
   '/album/$id': typeof AuthenticatedAlbumIdRoute
@@ -164,6 +180,7 @@ export interface FileRoutesById {
   '/intro': typeof IntroRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/_authenticated/browse': typeof AuthenticatedBrowseRoute
+  '/_authenticated/drive': typeof AuthenticatedDriveRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/onboarding': typeof AuthenticatedOnboardingRoute
@@ -171,6 +188,7 @@ export interface FileRoutesById {
   '/_authenticated/reels': typeof AuthenticatedReelsRoute
   '/_authenticated/remote': typeof AuthenticatedRemoteRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
+  '/_authenticated/stats': typeof AuthenticatedStatsRoute
   '/_authenticated/vaster': typeof AuthenticatedVasterRoute
   '/song/$id': typeof SongIdRoute
   '/_authenticated/album/$id': typeof AuthenticatedAlbumIdRoute
@@ -185,6 +203,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/admin'
     | '/browse'
+    | '/drive'
     | '/home'
     | '/library'
     | '/onboarding'
@@ -192,6 +211,7 @@ export interface FileRouteTypes {
     | '/reels'
     | '/remote'
     | '/search'
+    | '/stats'
     | '/vaster'
     | '/song/$id'
     | '/album/$id'
@@ -204,6 +224,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/admin'
     | '/browse'
+    | '/drive'
     | '/home'
     | '/library'
     | '/onboarding'
@@ -211,6 +232,7 @@ export interface FileRouteTypes {
     | '/reels'
     | '/remote'
     | '/search'
+    | '/stats'
     | '/vaster'
     | '/song/$id'
     | '/album/$id'
@@ -224,6 +246,7 @@ export interface FileRouteTypes {
     | '/intro'
     | '/_authenticated/admin'
     | '/_authenticated/browse'
+    | '/_authenticated/drive'
     | '/_authenticated/home'
     | '/_authenticated/library'
     | '/_authenticated/onboarding'
@@ -231,6 +254,7 @@ export interface FileRouteTypes {
     | '/_authenticated/reels'
     | '/_authenticated/remote'
     | '/_authenticated/search'
+    | '/_authenticated/stats'
     | '/_authenticated/vaster'
     | '/song/$id'
     | '/_authenticated/album/$id'
@@ -290,6 +314,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedVasterRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/stats': {
+      id: '/_authenticated/stats'
+      path: '/stats'
+      fullPath: '/stats'
+      preLoaderRoute: typeof AuthenticatedStatsRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/search': {
       id: '/_authenticated/search'
       path: '/search'
@@ -339,6 +370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/drive': {
+      id: '/_authenticated/drive'
+      path: '/drive'
+      fullPath: '/drive'
+      preLoaderRoute: typeof AuthenticatedDriveRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/browse': {
       id: '/_authenticated/browse'
       path: '/browse'
@@ -380,6 +418,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedBrowseRoute: typeof AuthenticatedBrowseRoute
+  AuthenticatedDriveRoute: typeof AuthenticatedDriveRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedOnboardingRoute: typeof AuthenticatedOnboardingRoute
@@ -387,6 +426,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedReelsRoute: typeof AuthenticatedReelsRoute
   AuthenticatedRemoteRoute: typeof AuthenticatedRemoteRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
+  AuthenticatedStatsRoute: typeof AuthenticatedStatsRoute
   AuthenticatedVasterRoute: typeof AuthenticatedVasterRoute
   AuthenticatedAlbumIdRoute: typeof AuthenticatedAlbumIdRoute
   AuthenticatedArtistIdRoute: typeof AuthenticatedArtistIdRoute
@@ -396,6 +436,7 @@ interface AuthenticatedRouteRouteChildren {
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAdminRoute: AuthenticatedAdminRoute,
   AuthenticatedBrowseRoute: AuthenticatedBrowseRoute,
+  AuthenticatedDriveRoute: AuthenticatedDriveRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedOnboardingRoute: AuthenticatedOnboardingRoute,
@@ -403,6 +444,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedReelsRoute: AuthenticatedReelsRoute,
   AuthenticatedRemoteRoute: AuthenticatedRemoteRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
+  AuthenticatedStatsRoute: AuthenticatedStatsRoute,
   AuthenticatedVasterRoute: AuthenticatedVasterRoute,
   AuthenticatedAlbumIdRoute: AuthenticatedAlbumIdRoute,
   AuthenticatedArtistIdRoute: AuthenticatedArtistIdRoute,

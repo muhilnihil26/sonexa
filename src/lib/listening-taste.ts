@@ -22,7 +22,7 @@ function storageKey(userKey?: string | null) {
   return `sonexa.taste.${userKey || "guest"}.v1`;
 }
 
-function readTaste(userKey?: string | null): TasteProfile {
+export function readTaste(userKey?: string | null): TasteProfile {
   if (typeof window === "undefined") return emptyTaste();
   try {
     const raw = localStorage.getItem(storageKey(userKey));

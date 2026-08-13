@@ -26,6 +26,8 @@ type Ctx = {
   removeFromPlaylist: (playlistId: string, trackId: string) => void;
   deletePlaylist: (playlistId: string) => void;
   renamePlaylist: (playlistId: string, name: string) => void;
+  exportData: () => string;
+  importData: (json: string) => boolean;
 };
 
 const LS_LIKES = "sonexa.likes.v1";
@@ -187,6 +189,21 @@ export function LocalLibraryProvider({ children }: { children: ReactNode }) {
     setPlaylists((p) => p.map((pl) => (pl.id === playlistId ? { ...pl, name } : pl)));
   }, []);
 
+  const exportData = useCallback(() => {
+    return JSON.stringify({ likes, playlists });
+  }, [likes, playlists]);
+
+  const importData = useCallback((json: string) => {
+    try {
+      const data = JSON.parse(json);
+      if (data.likes) setLikes(data.likes);
+      if (data.playlists) setPlaylists(data.playlists);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
   return (
     <C.Provider
       value={{
@@ -199,6 +216,8 @@ export function LocalLibraryProvider({ children }: { children: ReactNode }) {
         removeFromPlaylist,
         deletePlaylist,
         renamePlaylist,
+        exportData,
+        importData,
       }}
     >
       {children}

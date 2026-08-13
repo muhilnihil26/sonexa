@@ -214,11 +214,6 @@ function Landing() {
           ))}
         </div>
 
-        {/* Independence Day Banner */}
-        <div className="mt-16">
-          <IndependenceDayBanner />
-        </div>
-
         {/* Independence Day Feature */}
         <div className="mt-12">
           <RealisticFlag />

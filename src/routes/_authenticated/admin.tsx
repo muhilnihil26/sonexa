@@ -50,6 +50,7 @@ import {
 } from "@/lib/api/catalog.functions";
 import { SamplePlaylistImporter } from "@/components/sonexa/SamplePlaylistImporter";
 import { DownloadScheduler, DiscoveryScheduler } from "@/components/sonexa/SchedulerComponents";
+import { IndependenceAdminControls } from "@/components/sonexa/IndependenceAdminControls";
 import {
   adminAddYouTubeChannel,
   adminAddYouTubePlaylist,
@@ -404,6 +405,8 @@ function AdminOverview() {
 
   return (
     <div className="space-y-6">
+      {/* Independence Day Admin Controls */}
+      <IndependenceAdminControls />
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, index) => {
           const Icon = stat.icon;

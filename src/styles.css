@@ -108,6 +108,15 @@
   --shadow-patriotic: 0 20px 60px -20px rgba(255, 153, 51, 0.4);
 }
 
+:root[data-theme="india"] {
+  --primary: oklch(0.65 0.18 45); /* Saffron Orange */
+  --ring: oklch(0.65 0.18 45);
+  --sidebar-primary: oklch(0.65 0.18 45);
+  --sidebar-ring: oklch(0.65 0.18 45);
+  --gradient-brand: linear-gradient(135deg, oklch(0.65 0.18 45) 0%, oklch(0.95 0 0) 50%, oklch(0.65 0.18 145) 100%);
+}
+
+
 .dark {
   /* dark variant matches root (dark is default) */
 }

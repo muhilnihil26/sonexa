@@ -35,10 +35,11 @@ const tileOptions: Array<{ id: TileSize; label: string; detail: string }> = [
 
 function ProfilePage() {
   const { user } = useSession();
-  const { likes, playlists } = useLocalLibrary();
+  const { likes, playlists, exportData, importData } = useLocalLibrary();
   const { tileSize, setTileSize } = useProfilePrefs();
   const { languages, save: saveLanguages } = useLanguagePrefs(user?.id);
   const [name, setName] = useState(user?.displayName ?? "");
+  const [importRef, setImportRef] = useState<HTMLInputElement | null>(null);
 
   const [disableBackgroundPlay, setDisableBackgroundPlayState] = useState(() => {
     if (typeof window !== "undefined") {
@@ -188,6 +189,34 @@ function ProfilePage() {
       setSyncing(false);
     }
   }
+
+  const handleExport = () => {
+    const data = exportData();
+    const blob = new Blob([data], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `sonexa_backup_${new Date().toISOString().split("T")[0]}.sonexa`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success("Library exported successfully!");
+  };
+
+  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const success = importData(ev.target?.result as string);
+      if (success) {
+        toast.success("Library restored successfully!");
+      } else {
+        toast.error("Failed to parse backup file.");
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = "";
+  };
 
   return (
     <div className="min-h-full animate-page-in p-4 sm:p-6 md:p-10">
@@ -381,27 +410,50 @@ function ProfilePage() {
 
       <section className="mt-6 rounded-2xl border border-border bg-card/45 p-5">
         <div className="mb-4 flex items-center gap-2 font-semibold">
-          <CloudUpload className="h-5 w-5 text-primary" /> Cloud Backup
+          <CloudUpload className="h-5 w-5 text-primary" /> Backup & Restore
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Save your local playlists and liked songs to the cloud so you can restore them on other
-          devices.
+          Save your local playlists and liked songs offline or sync them to the cloud.
         </p>
-        <div className="flex gap-3">
-          <button
-            onClick={handleBackup}
-            disabled={syncing}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background/50 px-5 py-2.5 text-sm font-semibold hover:bg-background disabled:opacity-60"
-          >
-            <CloudUpload className="h-4 w-4" /> Backup to Cloud
-          </button>
-          <button
-            onClick={handleRestore}
-            disabled={syncing}
-            className="inline-flex items-center gap-2 rounded-full border border-border bg-background/50 px-5 py-2.5 text-sm font-semibold hover:bg-background disabled:opacity-60"
-          >
-            <CloudDownload className="h-4 w-4" /> Restore from Cloud
-          </button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex gap-2">
+            <button
+              onClick={handleBackup}
+              disabled={syncing}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2.5 text-sm font-semibold hover:bg-background disabled:opacity-60"
+            >
+              <CloudUpload className="h-4 w-4" /> Cloud Backup
+            </button>
+            <button
+              onClick={handleRestore}
+              disabled={syncing}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2.5 text-sm font-semibold hover:bg-background disabled:opacity-60"
+            >
+              <CloudDownload className="h-4 w-4" /> Cloud Restore
+            </button>
+          </div>
+          <div className="h-px w-full bg-border sm:h-auto sm:w-px" />
+          <div className="flex gap-2">
+            <button
+              onClick={handleExport}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2.5 text-sm font-semibold hover:bg-background"
+            >
+              <CloudDownload className="h-4 w-4" /> Export Offline Backup
+            </button>
+            <button
+              onClick={() => importRef?.click()}
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full border border-border bg-background/50 px-4 py-2.5 text-sm font-semibold hover:bg-background"
+            >
+              <CloudUpload className="h-4 w-4" /> Import Offline Backup
+            </button>
+            <input
+              type="file"
+              accept=".sonexa,.json"
+              className="hidden"
+              ref={(r) => setImportRef(r)}
+              onChange={handleImport}
+            />
+          </div>
         </div>
       </section>
 
