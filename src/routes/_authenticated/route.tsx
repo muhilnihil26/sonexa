@@ -2,7 +2,6 @@ import { createFileRoute, Outlet, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/sonexa/AppSidebar";
 import { PlayerBar } from "@/components/sonexa/PlayerBar";
-import { MiniPlayer } from "@/components/sonexa/MiniPlayer";
 import { YouTubeHost } from "@/components/sonexa/YouTubeHost";
 import { LocalLibraryProvider } from "@/lib/local-library";
 import { ProfilePrefsProvider } from "@/lib/profile-prefs";
@@ -21,15 +20,6 @@ function AuthedLayout() {
   const nav = useNavigate();
   const [checked, setChecked] = useState(false);
   const [platformClass, setPlatformClass] = useState("platform-web");
-  const [showMiniPlayer, setShowMiniPlayer] = useState(() => {
-    // Initialize from localStorage to persist across page reloads
-    if (typeof window !== "undefined") {
-      const saved = localStorage.getItem("sonexa.miniPlayer.dismissed");
-      return saved !== "true";
-    }
-    return false;
-  });
-  const [miniPlayerExpanded, setMiniPlayerExpanded] = useState(false);
 
   useEffect(() => {
     if (loading) return;
@@ -72,15 +62,7 @@ function AuthedLayout() {
           <main className="h-dvh min-w-0 flex-1 overflow-x-hidden overflow-y-auto pb-44 pt-0 md:pb-28">
             <Outlet />
           </main>
-          <PlayerBar onMiniPlayer={() => setShowMiniPlayer(true)} />
-          {showMiniPlayer && (
-            <MiniPlayer
-              onExpand={() => {
-                setShowMiniPlayer(false);
-                setMiniPlayerExpanded(true);
-              }}
-            />
-          )}
+          <PlayerBar />
           <YouTubeHost />
           <TvRemoteReceiver />
           <TvCastBridge />

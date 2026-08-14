@@ -15,6 +15,8 @@ import { FlagHoistingCertificate } from "@/components/sonexa/FlagHoistingCertifi
 import { IndependenceAdminControls } from "@/components/sonexa/IndependenceAdminControls";
 import { ImprovedInviteSystem } from "@/components/sonexa/ImprovedInviteSystem";
 import { IndependenceMusicPlayer } from "@/components/sonexa/IndependenceMusicPlayer";
+import { HypeInviteTracker } from "@/components/sonexa/HypeInviteTracker";
+import { OfflineBackup } from "@/components/sonexa/OfflineBackup";
 import { useSession } from "@/lib/auth";
 import { useLanguagePrefs } from "@/lib/language-prefs";
 import { isYtBroken, usePlayer, type Track } from "@/lib/player-store";
@@ -434,6 +436,14 @@ function Home() {
 
       <section className="animate-fade-up duration-700 [animation-delay:100ms] [animation-fill-mode:both]">
         <IndependenceAdminControls />
+      </section>
+
+      <section className="animate-fade-up duration-700 [animation-delay:110ms] [animation-fill-mode:both]">
+        <HypeInviteTracker />
+      </section>
+
+      <section className="animate-fade-up duration-700 [animation-delay:120ms] [animation-fill-mode:both]">
+        <OfflineBackup />
       </section>
 
       {/* Recents Spotify-style grid layout */}

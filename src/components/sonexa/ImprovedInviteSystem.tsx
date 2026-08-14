@@ -1,15 +1,36 @@
-import { useState } from "react";
-import { Share2, Copy, Check, Users, Music, Mail, MessageCircle, Send, Gift } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Share2, Copy, Check, Users, MessageCircle, Send, Award, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 export function ImprovedInviteSystem() {
   const [copied, setCopied] = useState(false);
   const [email, setEmail] = useState("");
   const [sentInvites, setSentInvites] = useState<string[]>([]);
   const [inviteLink] = useState("https://sonexa.app/invite");
+  const [hypePoints, setHypePoints] = useState(0);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("sonexa.hype.points");
+      if (saved) setHypePoints(parseInt(saved, 10));
+    }
+  }, []);
+
+  const addHypePoints = (amount: number, actionName: string) => {
+    setHypePoints((prev) => {
+      const next = prev + amount;
+      localStorage.setItem("sonexa.hype.points", next.toString());
+      toast.success(`+${amount} Hype Points! (${actionName})`, {
+        icon: "🔥"
+      });
+      return next;
+    });
+  };
 
   const copyInviteLink = () => {
     navigator.clipboard.writeText(inviteLink);
     setCopied(true);
+    addHypePoints(5, "Copied link");
     setTimeout(() => setCopied(false), 2000);
   };
 
@@ -17,11 +38,12 @@ export function ImprovedInviteSystem() {
     if (email) {
       setSentInvites([...sentInvites, email]);
       setEmail("");
+      addHypePoints(15, "Invited friend via Email");
     }
   };
 
   const shareOnSocial = (platform: string) => {
-    const shareText = "🎵 Join me on Sonexa - the best Tamil music streaming app! Listen to unlimited Tamil songs, podcasts, and more. #Sonexa #TamilMusic";
+    const shareText = "🎵 Join me on Sonexa - the ultimate Tamil music experience! Stream your favorite tunes and podcasts now. #Sonexa #TamilMusic";
     const shareUrl = encodeURIComponent(inviteLink);
     
     let url = "";
@@ -37,61 +59,97 @@ export function ImprovedInviteSystem() {
         break;
     }
     
-    if (url) window.open(url, "_blank");
+    if (url) {
+      window.open(url, "_blank");
+      addHypePoints(10, `Shared on ${platform}`);
+    }
   };
+
+  // Hype rank progression logic
+  const getRankInfo = () => {
+    if (hypePoints < 15) return { name: "Music Fan", level: 1, next: 15, badge: "🥉" };
+    if (hypePoints < 40) return { name: "Community Promoter", level: 2, next: 40, badge: "🥈" };
+    if (hypePoints < 80) return { name: "Sonexa Ambassador", level: 3, next: 80, badge: "🥇" };
+    return { name: "Sonexa Hype Master", level: 4, next: 999, badge: "👑" };
+  };
+
+  const rank = getRankInfo();
+  const progressPercent = Math.min(100, (hypePoints / rank.next) * 100);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold flex items-center gap-2">
-            <Users className="h-6 w-6 text-primary" />
-            Invite Friends
-          </h3>
-          <p className="text-muted-foreground mt-1">Share Sonexa with your friends and family</p>
+      <div>
+        <h3 className="text-2xl font-bold flex items-center gap-2">
+          <Users className="h-6 w-6 text-primary" />
+          Invite Friends
+        </h3>
+        <p className="text-muted-foreground mt-1">Share the vibe with your friends and boost your hype score</p>
+      </div>
+
+      {/* Hype Meter Card */}
+      <div className="p-5 rounded-2xl border border-primary/20 bg-primary/5 backdrop-blur relative overflow-hidden shadow-glow">
+        <div className="absolute top-3 right-3 text-2xl">{rank.badge}</div>
+        
+        <div className="flex items-center gap-2 text-sm font-semibold text-primary">
+          <Sparkles className="h-4 w-4 animate-spin-slow" /> Hype Meter
         </div>
+        
+        <div className="mt-2 flex items-baseline justify-between">
+          <div className="text-3xl font-black text-foreground">{hypePoints} <span className="text-xs text-muted-foreground font-normal">pts</span></div>
+          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{rank.name} (Lvl {rank.level})</div>
+        </div>
+
+        <div className="mt-3 relative h-2.5 bg-muted rounded-full overflow-hidden">
+          <div
+            className="absolute inset-y-0 left-0 bg-gradient-to-r from-orange-500 via-purple-500 to-green-600 transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        {rank.next !== 999 && (
+          <div className="mt-2 text-[10px] text-muted-foreground text-right font-medium">
+            {rank.next - hypePoints} points to level up
+          </div>
+        )}
       </div>
 
       {/* Invite Link */}
-      <div className="p-6 rounded-2xl border border-border bg-card/40 backdrop-blur">
-        <div className="flex items-center gap-4">
-          <div className="flex-1">
-            <label className="text-sm font-semibold text-foreground mb-2 block">Your Invite Link</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={inviteLink}
-                readOnly
-                className="flex-1 px-4 py-3 rounded-xl bg-background/60 border border-border text-foreground text-sm"
-              />
-              <button
-                onClick={copyInviteLink}
-                className="px-4 py-3 rounded-xl bg-primary text-background font-semibold hover:bg-primary/90 transition-colors"
-              >
-                {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
-              </button>
-            </div>
+      <div className="p-6 rounded-2xl border border-border bg-card/45 backdrop-blur">
+        <div>
+          <label className="text-sm font-semibold text-foreground mb-2 block">Your Unique Invite Link</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="text"
+              value={inviteLink}
+              readOnly
+              className="flex-1 px-4 py-3 rounded-xl bg-background/60 border border-border text-foreground text-sm"
+            />
+            <button
+              onClick={copyInviteLink}
+              className="px-4 py-3 rounded-xl bg-primary text-background font-semibold hover:bg-primary/90 transition-colors"
+            >
+              {copied ? <Check className="h-5 w-5" /> : <Copy className="h-5 w-5" />}
+            </button>
           </div>
         </div>
 
         {/* Social Share Buttons */}
-        <div className="flex items-center gap-3 mt-4">
-          <span className="text-sm text-muted-foreground">Share via:</span>
+        <div className="flex items-center gap-3 mt-5">
+          <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Share:</span>
           <button
             onClick={() => shareOnSocial("whatsapp")}
-            className="p-2 rounded-full bg-green-500/20 text-green-400 hover:bg-green-500/30 transition-colors"
+            className="p-2.5 rounded-full bg-green-500/10 text-green-400 hover:bg-green-500/20 transition-colors"
           >
             <MessageCircle className="h-5 w-5" />
           </button>
           <button
             onClick={() => shareOnSocial("twitter")}
-            className="p-2 rounded-full bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 transition-colors"
+            className="p-2.5 rounded-full bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 transition-colors"
           >
             <Share2 className="h-5 w-5" />
           </button>
           <button
             onClick={() => shareOnSocial("facebook")}
-            className="p-2 rounded-full bg-blue-600/20 text-blue-300 hover:bg-blue-600/30 transition-colors"
+            className="p-2.5 rounded-full bg-blue-600/10 text-blue-400 hover:bg-blue-600/20 transition-colors"
           >
             <Send className="h-5 w-5" />
           </button>
@@ -99,16 +157,8 @@ export function ImprovedInviteSystem() {
       </div>
 
       {/* Email Invite */}
-      <div className="p-6 rounded-2xl border border-border bg-card/40 backdrop-blur">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 rounded-lg bg-primary/20 text-primary">
-            <Mail className="h-5 w-5" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-foreground">Send Email Invitation</h4>
-            <p className="text-sm text-muted-foreground">Invite friends directly via email</p>
-          </div>
-        </div>
+      <div className="p-6 rounded-2xl border border-border bg-card/45 backdrop-blur">
+        <h4 className="font-semibold text-foreground text-sm mb-3">Invite via Email</h4>
         <div className="flex items-center gap-2">
           <input
             type="email"
@@ -125,68 +175,6 @@ export function ImprovedInviteSystem() {
           </button>
         </div>
       </div>
-
-      {/* Invite Benefits */}
-      <div className="p-6 rounded-2xl border border-border bg-gradient-to-br from-primary/10 via-background to-primary/10">
-        <div className="flex items-center gap-3 mb-4">
-          <Gift className="h-6 w-6 text-primary" />
-          <h4 className="font-semibold text-foreground">Why Invite Friends?</h4>
-        </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          <div className="p-4 rounded-xl bg-background/60">
-            <Music className="h-5 w-5 text-primary mb-2" />
-            <h5 className="font-semibold text-foreground text-sm mb-1">Share Music</h5>
-            <p className="text-xs text-muted-foreground">Create and share playlists together</p>
-          </div>
-          <div className="p-4 rounded-xl bg-background/60">
-            <Users className="h-5 w-5 text-primary mb-2" />
-            <h5 className="font-semibold text-foreground text-sm mb-1">Build Community</h5>
-            <p className="text-xs text-muted-foreground">Connect with music lovers</p>
-          </div>
-          <div className="p-4 rounded-xl bg-background/60">
-            <Gift className="h-5 w-5 text-primary mb-2" />
-            <h5 className="font-semibold text-foreground text-sm mb-1">Exclusive Features</h5>
-            <p className="text-xs text-muted-foreground">Unlock special features together</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Stats */}
-      <div className="grid grid-cols-3 gap-4">
-        <div className="p-4 rounded-xl text-center bg-card/40 border border-border">
-          <div className="text-2xl font-bold text-primary">{sentInvites.length}</div>
-          <div className="text-xs text-muted-foreground">Invites Sent</div>
-        </div>
-        <div className="p-4 rounded-xl text-center bg-card/40 border border-border">
-          <div className="text-2xl font-bold text-green-400">0</div>
-          <div className="text-xs text-muted-foreground">Friends Joined</div>
-        </div>
-        <div className="p-4 rounded-xl text-center bg-card/40 border border-border">
-          <div className="text-2xl font-bold text-yellow-400">0</div>
-          <div className="text-xs text-muted-foreground">Playlists Shared</div>
-        </div>
-      </div>
-
-      {/* Sent Invites List */}
-      {sentInvites.length > 0 && (
-        <div className="p-4 rounded-xl border border-border bg-card/40">
-          <h5 className="font-semibold text-foreground mb-3 flex items-center gap-2">
-            <Users className="h-4 w-4 text-primary" />
-            Recently Invited
-          </h5>
-          <div className="space-y-2">
-            {sentInvites.map((email, index) => (
-              <div key={index} className="flex items-center justify-between p-2 rounded-lg bg-background/40">
-                <span className="text-sm text-foreground">{email}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Pending</span>
-                  <Check className="h-4 w-4 text-green-400" />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

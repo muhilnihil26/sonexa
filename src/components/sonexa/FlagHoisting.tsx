@@ -1,185 +1,217 @@
-import { useState, useEffect } from "react";
-import { ChevronUp, Flag, Music, Award, Share2, Download } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { ChevronUp, RefreshCw, Music } from "lucide-react";
+import { usePlayer } from "@/lib/player-store";
+import { FlagHoistingCertificate } from "./FlagHoistingCertificate";
 
 export function FlagHoisting() {
-  const [flagHeight, setFlagHeight] = useState(0);
-  const [isHoisting, setIsHoisting] = useState(false);
+  const { play } = usePlayer();
+  const [height, setHeight] = useState(0); // 0 to 100
+  const [petals, setPetals] = useState<{ id: number; left: number; delay: number; color: string }[]>([]);
   const [isHoisted, setIsHoisted] = useState(false);
-  const [userProgress, setUserProgress] = useState(0);
+  const petalIdRef = useRef(0);
 
-  const startHoisting = () => {
-    setIsHoisting(true);
-    const interval = setInterval(() => {
-      setFlagHeight(prev => {
-        if (prev >= 100) {
-          clearInterval(interval);
-          setIsHoisting(false);
-          setIsHoisted(true);
-          return 100;
-        }
-        return prev + 2;
-      });
-    }, 50);
+  const pullRope = () => {
+    if (height >= 100) return;
+    setHeight((prev) => {
+      const next = prev + 10;
+      if (next >= 100) {
+        setIsHoisted(true);
+        triggerPetalShower();
+        // Play national anthem
+        play({
+          id: "ind-1",
+          title: "Jana Gana Mana",
+          artist: "Rabindranath Tagore",
+          cover: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=300&h=300&fit=crop",
+          audio: "",
+          kind: "youtube",
+          ytId: "vp1HVg_J1Xg"
+        });
+        return 100;
+      }
+      return next;
+    });
   };
 
-  const resetFlag = () => {
-    setFlagHeight(0);
+  const triggerPetalShower = () => {
+    const newPetals = Array.from({ length: 40 }).map(() => {
+      petalIdRef.current++;
+      const colors = ["#FF9933", "#FAFAFA", "#138808", "#FFD700", "#FF69B4"];
+      return {
+        id: petalIdRef.current,
+        left: Math.random() * 80 + 10, // 10% to 90%
+        delay: Math.random() * 3, // delay up to 3s
+        color: colors[Math.floor(Math.random() * colors.length)]
+      };
+    });
+    setPetals(newPetals);
+  };
+
+  const reset = () => {
+    setHeight(0);
     setIsHoisted(false);
-    setIsHoisting(false);
+    setPetals([]);
   };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-bold flex items-center gap-2">
-            <Flag className="h-6 w-6 text-orange-500" />
-            Flag Hoisting Ceremony
-          </h3>
-          <p className="text-muted-foreground mt-1">Hoist the flag and receive your certificate</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <div className="px-3 py-1 rounded-full bg-orange-500/20 text-orange-400 text-sm font-semibold">
-            {isHoisted ? "🎉 Completed" : "In Progress"}
-          </div>
-        </div>
+      <div>
+        <h3 className="text-2xl font-bold flex items-center gap-2">
+          🇮🇳 Interactive Flag Hoisting Ceremony
+        </h3>
+        <p className="text-muted-foreground mt-1">
+          Pull the rope step-by-step to hoist the Indian National Flag. Unfurl the flag at the top to receive your Certificate of Honour.
+        </p>
       </div>
 
-      {/* Flag Hoisting Area */}
-      <div className="relative w-full h-96 rounded-2xl overflow-hidden bg-gradient-to-b from-sky-300 via-sky-200 to-green-700 shadow-lg">
-        {/* Sky */}
-        <div className="absolute inset-0 bg-gradient-to-b from-sky-400 via-sky-300 to-sky-200" />
-        
+      {/* Flag Mast Area */}
+      <div className="relative w-full h-[450px] rounded-3xl overflow-hidden bg-gradient-to-b from-sky-400 via-sky-200 to-green-700/80 shadow-2xl border border-white/10">
         {/* Sun */}
-        <div className="absolute top-8 right-12 w-16 h-16 bg-yellow-400 rounded-full shadow-lg shadow-yellow-400/50" />
-        
-        {/* Ground */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-green-800 to-green-600" />
-        
-        {/* Flag pole */}
-        <div className="absolute bottom-24 left-16 w-4 h-96 bg-gradient-to-r from-gray-600 via-gray-500 to-gray-400 rounded-t shadow-xl" />
-        
-        {/* Flag rope */}
-        <div className="absolute bottom-24 left-20 w-1 h-96 bg-gray-400" />
-        
-        {/* Flag */}
+        <div className="absolute top-12 right-12 w-20 h-20 bg-gradient-to-br from-yellow-300 to-orange-400 rounded-full shadow-[0_0_50px_rgba(251,191,36,0.6)] animate-pulse" />
+
+        {/* Clouds */}
+        <div className="absolute top-20 left-10 w-24 h-8 bg-white/40 rounded-full blur-sm" />
+        <div className="absolute top-28 right-1/3 w-36 h-10 bg-white/30 rounded-full blur-sm" />
+
+        {/* Flag Pole */}
+        <div className="absolute bottom-16 left-1/2 -translate-x-1/2 w-4 h-[350px] bg-gradient-to-r from-gray-500 via-gray-300 to-gray-400 rounded-t shadow-lg" />
+
+        {/* Rope */}
         <div 
-          className="absolute left-24 bottom-24 w-48 h-32 rounded transition-all duration-300 ease-out shadow-2xl overflow-hidden"
-          style={{ 
-            transform: `translateY(-${flagHeight * 2.5}px)`,
-            opacity: flagHeight > 0 ? 1 : 0.8
+          className="absolute left-[calc(50%-10px)] w-0.5 h-[350px] bg-amber-900/60"
+          style={{ bottom: "16px" }}
+        />
+        <div 
+          className="absolute left-[calc(50%+8px)] w-0.5 h-[350px] bg-amber-900/60"
+          style={{ bottom: "16px" }}
+        />
+
+        {/* The Flag */}
+        <div
+          className="absolute left-1/2 w-44 h-28 shadow-2xl flex flex-col transition-all duration-300 ease-out"
+          style={{
+            bottom: `${16 + (height / 100) * 280}px`,
+            transform: "translateX(2px)",
+            animation: height === 100 ? "flagFlutter 3s ease-in-out infinite" : "none",
           }}
         >
-          {/* Saffron stripe */}
+          {/* Saffron */}
           <div className="h-1/3 bg-gradient-to-r from-orange-500 via-orange-400 to-orange-500 w-full" />
-          {/* White stripe */}
-          <div className="h-1/3 bg-gradient-to-r from-white via-gray-100 to-white w-full relative">
-            {/* Ashoka Chakra */}
-            <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-10 h-10">
-              <div className="relative w-full h-full">
-                <div className="absolute inset-0 border-2 border-blue-900 rounded-full" />
-                {[...Array(24)].map((_, i) => (
-                  <div
-                    key={i}
-                    className="absolute top-1/2 left-1/2 w-0.5 h-2 bg-blue-900 origin-bottom"
-                    style={{ 
-                      transform: `rotate(${i * 15}deg) translateY(-50%) translateX(-50%)`
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
+          {/* White */}
+          <div className="h-1/3 bg-gradient-to-r from-white via-gray-100 to-white w-full flex items-center justify-center relative">
+            <svg width="28" height="28" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#000080" strokeWidth="3" />
+              <circle cx="50" cy="50" r="8" fill="#000080" />
+              {Array.from({ length: 24 }).map((_, i) => (
+                <line
+                  key={i}
+                  x1="50"
+                  y1="50"
+                  x2={50 + 40 * Math.cos((i * 15 * Math.PI) / 180)}
+                  y2={50 + 40 * Math.sin((i * 15 * Math.PI) / 180)}
+                  stroke="#000080"
+                  strokeWidth="1.5"
+                />
+              ))}
+            </svg>
           </div>
-          {/* Green stripe */}
+          {/* Green */}
           <div className="h-1/3 bg-gradient-to-r from-green-500 via-green-400 to-green-500 w-full" />
-          
-          {/* Realistic wave effect */}
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute top-0 left-1/4 w-2 h-full bg-gradient-to-r from-transparent via-black/30 to-transparent" />
-            <div className="absolute top-0 left-1/2 w-2 h-full bg-gradient-to-r from-transparent via-black/30 to-transparent" />
-            <div className="absolute top-0 left-3/4 w-2 h-full bg-gradient-to-r from-transparent via-black/30 to-transparent" />
-          </div>
+
+          {/* Folds shadow overlay */}
+          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-black/5 to-transparent pointer-events-none" />
         </div>
 
-        {/* Progress indicator */}
-        <div className="absolute right-8 top-1/2 transform -translate-y-1/2 flex flex-col items-center gap-2">
-          <div className="text-sm font-semibold text-gray-700">{flagHeight}%</div>
-          <div className="w-4 h-64 bg-gray-200 rounded-full overflow-hidden">
-            <div 
-              className="w-full bg-gradient-to-t from-orange-500 via-white to-green-500 transition-all duration-300"
-              style={{ height: `${flagHeight}%` }}
-            />
-          </div>
+        {/* Ground pedestal */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-32 h-16 bg-gradient-to-b from-gray-300 to-gray-400 rounded-t-xl flex flex-col items-center justify-center shadow-lg border-t border-white/20">
+          <div className="w-24 h-4 bg-gray-400 rounded-t-md" />
+          <div className="w-20 h-4 bg-gray-500 rounded-t-md" />
         </div>
 
-        {/* Crowd silhouettes */}
-        <div className="absolute bottom-24 left-1/2 transform -translate-x-1/2 flex items-end gap-2">
-          {[...Array(5)].map((_, i) => (
-            <div
-              key={i}
-              className="w-8 h-16 bg-gray-800 rounded-t-lg opacity-60"
-              style={{ height: `${12 + Math.random() * 8}rem` }}
-            />
-          ))}
-        </div>
-      </div>
+        {/* Petals shower overlay */}
+        {petals.map((p) => (
+          <div
+            key={p.id}
+            className="absolute w-2 h-4 rounded-full pointer-events-none animate-petal-fall"
+            style={{
+              left: `${p.left}%`,
+              top: "-20px",
+              backgroundColor: p.color,
+              animationDelay: `${p.delay}s`,
+            }}
+          />
+        ))}
 
-      {/* Controls */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          {!isHoisted ? (
-            <button
-              onClick={startHoisting}
-              disabled={isHoisting}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-green-500 text-white font-semibold hover:scale-105 transition-transform disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-            >
-              <ChevronUp className="h-5 w-5" />
-              {isHoisting ? "Hoisting..." : "Hoist Flag"}
-            </button>
-          ) : (
-            <button
-              onClick={resetFlag}
-              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gray-600 text-white font-semibold hover:bg-gray-700 transition-colors"
-            >
-              <Flag className="h-5 w-5" />
-              Reset
-            </button>
-          )}
-          
-          <button className="flex items-center gap-2 px-4 py-3 rounded-xl bg-blue-900 text-white font-semibold hover:bg-blue-800 transition-colors">
-            <Music className="h-4 w-4" />
-            Play Anthem
-          </button>
-        </div>
-
+        {/* Unfurled flower shower particles from flag */}
         {isHoisted && (
-          <div className="flex items-center gap-2">
-            <button className="flex items-center gap-2 px-4 py-2 rounded-lg bg-green-600 text-white font-semibold hover:bg-green-700 transition-colors">
-              <Award className="h-4 w-4" />
-              Get Certificate
-            </button>
-            <button className="p-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-              <Share2 className="h-4 w-4" />
-            </button>
-            <button className="p-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors">
-              <Download className="h-4 w-4" />
-            </button>
+          <div className="absolute top-[80px] left-1/2 -translate-x-1/2 w-48 h-10 pointer-events-none flex justify-center">
+            <span className="text-xs font-black text-amber-300 drop-shadow-glow animate-bounce">
+              🌺 JAI HIND 🌺
+            </span>
           </div>
         )}
       </div>
 
-      {/* Achievement message */}
+      {/* Control panel */}
+      <div className="flex flex-wrap items-center justify-between gap-4 p-4 rounded-2xl bg-card border border-border">
+        <div className="flex items-center gap-3">
+          {height < 100 ? (
+            <button
+              onClick={pullRope}
+              className="flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-orange-500 to-green-600 text-white font-bold hover:scale-105 transition active:scale-95 shadow-glow"
+            >
+              <ChevronUp className="h-5 w-5" /> Pull Hoisting Rope ({height}%)
+            </button>
+          ) : (
+            <button
+              onClick={reset}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-muted text-muted-foreground hover:text-foreground font-semibold transition"
+            >
+              <RefreshCw className="h-4 w-4" /> Reset Ceremony
+            </button>
+          )}
+
+          {isHoisted && (
+            <button
+              onClick={() => {
+                play({
+                  id: "ind-1",
+                  title: "Jana Gana Mana",
+                  artist: "Rabindranath Tagore",
+                  cover: "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=300&h=300&fit=crop",
+                  audio: "",
+                  kind: "youtube",
+                  ytId: "vp1HVg_J1Xg"
+                });
+              }}
+              className="flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-900 text-white font-semibold hover:bg-blue-800 transition"
+            >
+              <Music className="h-4 w-4" /> Play Anthem
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Certificate generation available after hoisting */}
       {isHoisted && (
-        <div className="p-4 rounded-xl bg-gradient-to-r from-orange-500/20 via-white/10 to-green-500/20 border border-orange-500/30 animate-fade-up">
-          <div className="flex items-center gap-3">
-            <div className="text-4xl">🎉</div>
-            <div>
-              <h4 className="font-bold text-foreground">Congratulations!</h4>
-              <p className="text-sm text-muted-foreground">You have successfully hoisted the flag. Download your certificate now!</p>
-            </div>
-          </div>
+        <div className="p-6 rounded-2xl border border-primary/20 bg-primary/5 animate-fade-up">
+          <FlagHoistingCertificate />
         </div>
       )}
+
+      <style>{`
+        @keyframes flagFlutter {
+          0%, 100% { transform: scaleY(1) rotate(0deg); }
+          50% { transform: scaleY(0.96) rotate(1deg) skewX(2deg); }
+        }
+        @keyframes petalFall {
+          0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+          100% { transform: translateY(480px) rotate(360deg); opacity: 0; }
+        }
+        .animate-petal-fall {
+          animation: petalFall 4s linear infinite;
+        }
+      `}</style>
     </div>
   );
 }

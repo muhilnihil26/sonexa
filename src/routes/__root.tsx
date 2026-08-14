@@ -15,7 +15,6 @@ import { PlayerProvider } from "../lib/player-store";
 import { Toaster } from "../components/ui/sonner";
 import { KeyboardShortcuts } from "../components/sonexa/KeyboardShortcuts";
 import { IntroAnimation } from "../components/sonexa/IntroAnimation";
-import { PersistentMiniPlayer } from "../components/sonexa/PersistentMiniPlayer";
 import { useHolidayTheme } from "../hooks/useHolidayTheme";
 import { RealisticFlag } from "../components/sonexa/RealisticFlag";
 
@@ -190,7 +189,6 @@ function RootComponent() {
         <TvRemoteFocus />
         {showIntro && <IntroAnimation onComplete={() => setShowIntro(false)} />}
         <KeyboardShortcuts />
-        <PersistentMiniPlayer />
         <div className="min-h-screen animate-fade-up smooth-scroll">
           <Outlet />
         </div>
